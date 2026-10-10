@@ -1,3 +1,4 @@
+import CoreLocation
 import Foundation
 import ZTLCore
 
@@ -21,6 +22,31 @@ struct RouteAnalysis {
         return GoogleMapsLink.directionsURL(origin: result.origin, destination: result.destination, waypoints: waypoints)
     }
 
+    /// Dove lasciare l'auto: poco prima della prima zona del percorso principale.
+    /// `nil` se il percorso parte già dentro la zona.
+    private var switchSample: (point: Coordinate, distanceAlong: Double)? {
+        guard let hit = mainHits.first, let main = result.options.first else { return nil }
+        return RouteAnalyzer.switchPoint(route: main.coordinates, before: hit)
+    }
+
+    var switchPoint: Coordinate? { switchSample?.point }
+
+    /// Metri del percorso in auto rimasti dopo il punto di cambio.
+    var lastLegDistance: Double {
+        guard let main = result.options.first else { return 0 }
+        return max(0, main.distance - (switchSample?.distanceAlong ?? 0))
+    }
+
+    /// Primo tratto in auto, fino al punto di cambio.
+    func drivingLegLink(to point: Coordinate) -> URL {
+        GoogleMapsLink.directionsURL(origin: result.origin, destination: point)
+    }
+
+    /// Ultimo tratto con l'altro mezzo; senza punto di cambio parte dalla partenza.
+    func lastLegLink(from point: Coordinate?, mode: TravelMode) -> URL {
+        GoogleMapsLink.directionsURL(origin: point ?? result.origin, destination: result.destination, mode: mode)
+    }
+
     /// Minuti in più dell'alternativa rispetto al percorso principale.
     var extraMinutes: Int {
         guard let alternative = cleanAlternative, let main = result.options.first else { return 0 }
@@ -42,6 +68,12 @@ final class RouteCheckModel: ObservableObject {
     @Published var notice: String?
     /// Passaggi del controllo, per capire cosa non va.
     @Published private(set) var details: [String] = []
+    /// Mezzo per l'ultimo tratto, dopo aver lasciato l'auto fuori dalla zona.
+    @Published var lastLegMode: TravelMode {
+        didSet { defaults.set(lastLegMode.rawValue, forKey: "lastLegMode") }
+    }
+    /// Indirizzo del punto in cui lasciare l'auto.
+    @Published private(set) var switchPointName: String?
     @Published var vehicle: Vehicle {
         didSet {
             defaults.set(vehicle.rawValue, forKey: "routeVehicle")
@@ -52,9 +84,11 @@ final class RouteCheckModel: ObservableObject {
     private let defaults = UserDefaults.standard
     private var result: RouteCheckResult?
     private var task: Task<Void, Never>?
+    private let geocoder = CLGeocoder()
 
     init() {
         vehicle = Vehicle(rawValue: UserDefaults.standard.string(forKey: "routeVehicle") ?? "") ?? .auto
+        lastLegMode = TravelMode(rawValue: UserDefaults.standard.string(forKey: "lastLegMode") ?? "") ?? .walking
     }
 
     func check(_ text: String) {
@@ -90,6 +124,21 @@ final class RouteCheckModel: ObservableObject {
                 rules: rules
             )
         }
-        phase = .done(RouteAnalysis(result: result, hits: hits))
+        let analysis = RouteAnalysis(result: result, hits: hits)
+        phase = .done(analysis)
+        nameSwitchPoint(analysis.switchPoint)
+    }
+
+    private func nameSwitchPoint(_ point: Coordinate?) {
+        geocoder.cancelGeocode()
+        switchPointName = nil
+        guard let point else { return }
+        geocoder.reverseGeocodeLocation(CLLocation(latitude: point.latitude, longitude: point.longitude)) { [weak self] placemarks, _ in
+            guard let placemark = placemarks?.first else { return }
+            let name = [placemark.thoroughfare, placemark.subThoroughfare].compactMap { $0 }.joined(separator: " ")
+            Task { @MainActor in
+                self?.switchPointName = name.isEmpty ? placemark.name : name
+            }
+        }
     }
 }

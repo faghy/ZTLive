@@ -96,12 +96,16 @@ struct RouteCheckSections: View {
                             .font(.headline)
                     }
                 } else {
-                    Text("Nessuna alternativa senza ZTL tra quelle proposte da Apple Maps. Valuta un parcheggio fuori dalla zona.")
+                    Text("Nessuna alternativa in auto senza ZTL tra quelle proposte da Apple Maps: puoi lasciare l'auto prima della zona e proseguire con un altro mezzo.")
                         .foregroundStyle(.secondary)
                 }
             } header: {
                 Text("Come evitarle")
             }
+        }
+
+        if !analysis.mainHits.isEmpty {
+            lastLeg(analysis)
         }
 
         if let notice = model.notice {
@@ -114,6 +118,52 @@ struct RouteCheckSections: View {
             EmptyView()
         } footer: {
             Text("Il controllo usa i percorsi di Apple Maps tra gli stessi punti: Google Maps potrebbe scegliere strade diverse. Gli orari di passaggio sono stimati partendo adesso.")
+        }
+    }
+
+    /// Stesso percorso in auto fino a poco prima della zona, poi a piedi, in bici o con i mezzi.
+    @ViewBuilder
+    private func lastLeg(_ analysis: RouteAnalysis) -> some View {
+        let switchPoint = analysis.switchPoint
+        Section {
+            Picker("Mezzo", selection: $model.lastLegMode) {
+                ForEach(TravelMode.lastLegModes, id: \.self) { mode in
+                    Text(mode.label).tag(mode)
+                }
+            }
+            .pickerStyle(.segmented)
+
+            if let switchPoint {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("1. In auto fino a \(model.switchPointName ?? "poco prima della ZTL")")
+                    Text("Stesso percorso, ti fermi prima di entrare.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Button {
+                    open(analysis.drivingLegLink(to: switchPoint))
+                } label: {
+                    Label("Apri in Google Maps", systemImage: "car.fill")
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("\(switchPoint == nil ? "" : "2. ")\(model.lastLegMode.label) fino a \(analysis.result.destinationLabel)")
+                Text("Circa \(kilometers(analysis.lastLegDistance)) rimasti")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Button {
+                open(analysis.lastLegLink(from: switchPoint, mode: model.lastLegMode))
+            } label: {
+                Label("Apri in Google Maps", systemImage: model.lastLegMode.symbol)
+            }
+        } header: {
+            Text(switchPoint == nil ? "Prosegui senza auto" : "Lascia l'auto prima della ZTL")
+        } footer: {
+            if switchPoint != nil {
+                Text("Google Maps non accetta due mezzi nello stesso link: apri il primo tratto e, arrivato, torna qui per il secondo.")
+            }
         }
     }
 
@@ -133,6 +183,28 @@ enum GoogleMapsOpener {
             if !accepted {
                 openURL(url) { _ in }
             }
+        }
+    }
+}
+
+extension TravelMode {
+    static let lastLegModes: [TravelMode] = [.walking, .bicycling, .transit]
+
+    var label: String {
+        switch self {
+        case .driving: return "In auto"
+        case .walking: return "A piedi"
+        case .bicycling: return "In bici"
+        case .transit: return "Con i mezzi"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .driving: return "car.fill"
+        case .walking: return "figure.walk"
+        case .bicycling: return "bicycle"
+        case .transit: return "tram.fill"
         }
     }
 }

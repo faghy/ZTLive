@@ -377,4 +377,29 @@ final class GoogleMapsLinkTests: XCTestCase {
         XCTAssertTrue(route.isDriving)
         XCTAssertEqual(GoogleMapsLink.appURL(for: link)?.scheme, "comgooglemapsurl")
     }
+
+    func testDirectionsURLWithOtherMode() throws {
+        let link = GoogleMapsLink.directionsURL(
+            origin: Coordinate(latitude: 45.47, longitude: 9.17),
+            destination: Coordinate(latitude: 45.484, longitude: 9.1895),
+            mode: .walking
+        )
+        XCTAssertTrue(link.absoluteString.contains("travelmode=walking"))
+        let route = try XCTUnwrap(GoogleMapsLink.parse(link))
+        XCTAssertEqual(route.points.count, 2)
+        XCTAssertFalse(route.isDriving)
+    }
+
+    func testSwitchPointBeforeZoneEntry() throws {
+        // Percorso verso nord di circa 1,1 km, ingresso nella zona a 800 m.
+        let route = [Coordinate(latitude: 45.45, longitude: 9.19), Coordinate(latitude: 45.46, longitude: 9.19)]
+        let hit = RouteHit(zoneID: "test", name: "Test", zone: .ztl, entry: route[1], distanceAlong: 800, passTime: Date())
+        let result = try XCTUnwrap(RouteAnalyzer.switchPoint(route: route, before: hit))
+        XCTAssertLessThanOrEqual(result.distanceAlong, 750)
+        XCTAssertGreaterThan(result.distanceAlong, 730)
+        XCTAssertLessThan(result.point.latitude, 45.46)
+
+        let atStart = RouteHit(zoneID: "test", name: "Test", zone: .ztl, entry: route[0], distanceAlong: 0, passTime: Date())
+        XCTAssertNil(RouteAnalyzer.switchPoint(route: route, before: atStart))
+    }
 }

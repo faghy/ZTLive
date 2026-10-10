@@ -53,6 +53,15 @@ public enum RouteAnalyzer {
         return found
     }
 
+    /// Punto del percorso `margin` metri prima dell'ingresso nella zona, dove lasciare l'auto e cambiare mezzo.
+    /// `nil` se l'ingresso è già alla partenza.
+    public static func switchPoint(route: [Coordinate], before hit: RouteHit, margin: Double = 50) -> (point: Coordinate, distanceAlong: Double)? {
+        let target = hit.distanceAlong - margin
+        guard target > 0 else { return nil }
+        guard let sample = densify(route).last(where: { $0.distance <= target }) else { return nil }
+        return (sample.point, sample.distance)
+    }
+
     /// Fino a `limit` punti del percorso alternativo, scelti dove passa accanto alle zone evitate.
     /// Passati a Google Maps come tappe, lo costringono a seguire l'alternativa.
     public static func detourWaypoints(alternative: [Coordinate], avoiding hits: [RouteHit], limit: Int = 3) -> [Coordinate] {

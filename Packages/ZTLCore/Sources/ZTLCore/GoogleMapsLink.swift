@@ -19,6 +19,14 @@ public struct SharedRoute: Equatable, Sendable {
     }
 }
 
+/// Mezzi accettati dai link di Google Maps (la metro è compresa nei mezzi pubblici).
+public enum TravelMode: String, CaseIterable, Sendable {
+    case driving
+    case walking
+    case bicycling
+    case transit
+}
+
 public enum GoogleMapsLink {
     /// Primo link presente nel testo condiviso (es. "Indicazioni per ...: https://maps.app.goo.gl/...").
     public static func firstURL(in text: String) -> URL? {
@@ -117,8 +125,8 @@ public enum GoogleMapsLink {
         return nil
     }
 
-    /// Link di Google Maps con percorso in auto e tappe intermedie. Senza `origin` parte dalla posizione attuale.
-    public static func directionsURL(origin: Coordinate?, destination: Coordinate, waypoints: [Coordinate]) -> URL {
+    /// Link di Google Maps con percorso e tappe intermedie. Senza `origin` parte dalla posizione attuale.
+    public static func directionsURL(origin: Coordinate?, destination: Coordinate, waypoints: [Coordinate] = [], mode: TravelMode = .driving) -> URL {
         var components = URLComponents(string: "https://www.google.com/maps/dir/")!
         var items = [URLQueryItem(name: "api", value: "1")]
         if let origin {
@@ -128,7 +136,7 @@ public enum GoogleMapsLink {
         if !waypoints.isEmpty {
             items.append(URLQueryItem(name: "waypoints", value: waypoints.map(format).joined(separator: "|")))
         }
-        items.append(URLQueryItem(name: "travelmode", value: "driving"))
+        items.append(URLQueryItem(name: "travelmode", value: mode.rawValue))
         components.queryItems = items
         return components.url!
     }
