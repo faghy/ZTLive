@@ -1,0 +1,13 @@
+# Generati da XcodeGen
+*.xcodeproj
+Generated/
+
+# Build
+build/
+.build/
+Payload/
+*.ipa
+DerivedData/
+.swiftpm/
+
+.DS_Store

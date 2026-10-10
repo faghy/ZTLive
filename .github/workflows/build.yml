@@ -1,0 +1,66 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  core-tests:
+    name: Test logica (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: swift --version
+      - run: swift test --package-path Packages/ZTLCore
+
+  ios:
+    name: App iOS non firmata
+    runs-on: macos-latest
+    needs: core-tests
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Genera il progetto Xcode
+        run: |
+          brew install xcodegen
+          xcodegen generate
+
+      - name: Compila
+        run: |
+          xcodebuild -project ZTLive.xcodeproj -scheme ZTLive \
+            -configuration Release -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            build
+
+      - name: Crea l'IPA
+        run: |
+          mkdir -p Payload
+          cp -R build/Build/Products/Release-iphoneos/ZTLive.app Payload/
+          zip -qry ZTLive.ipa Payload
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ZTLive-ipa
+          path: ZTLive.ipa
+
+      - name: Pubblica nella release "prototype"
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view prototype >/dev/null 2>&1 || \
+            gh release create prototype --prerelease --target main \
+              --title "Prototipo (ultima build)" \
+              --notes "Build automatica non firmata dell'ultimo commit su main. Installala con SideStore."
+          gh release upload prototype ZTLive.ipa --clobber

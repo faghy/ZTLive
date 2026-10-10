@@ -1,0 +1,63 @@
+# Progetto Xcode generato con XcodeGen (`xcodegen generate`), anche in CI.
+name: ZTLive
+options:
+  bundleIdPrefix: com.faghy
+  deploymentTarget:
+    iOS: "18.0"
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    TARGETED_DEVICE_FAMILY: "1"
+
+packages:
+  ZTLCore:
+    path: Packages/ZTLCore
+
+targets:
+  ZTLive:
+    type: application
+    platform: iOS
+    sources:
+      - App
+      - Shared
+      - path: Resources
+        buildPhase: resources
+    dependencies:
+      - package: ZTLCore
+      - target: ZTLiveWidget
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.faghy.ztlive
+    info:
+      path: Generated/App-Info.plist
+      properties:
+        CFBundleDisplayName: ZTLive
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UIBackgroundModes:
+          - location
+          - audio
+        NSLocationWhenInUseUsageDescription: ZTLive usa la posizione per avvisarti quando ti avvicini a un varco ZTL, anche mentre usi Google Maps.
+        NSLocationAlwaysAndWhenInUseUsageDescription: ZTLive usa la posizione per avvisarti quando ti avvicini a un varco ZTL, anche mentre usi Google Maps.
+        NSSupportsLiveActivities: true
+        NSSupportsLiveActivitiesFrequentUpdates: true
+    scheme: {}
+
+  ZTLiveWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - Widget
+      - Shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.faghy.ztlive.widget
+    info:
+      path: Generated/Widget-Info.plist
+      properties:
+        CFBundleDisplayName: ZTLive
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
