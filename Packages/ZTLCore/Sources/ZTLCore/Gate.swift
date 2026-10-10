@@ -4,13 +4,20 @@ public enum Zone: String, Codable, Sendable, CaseIterable {
     case areaC
     case areaB
     case ztl
+    case pedestrian
 
     public var label: String {
         switch self {
         case .areaC: return "Area C"
         case .areaB: return "Area B"
         case .ztl: return "ZTL"
+        case .pedestrian: return "Area pedonale"
         }
+    }
+
+    /// Area B e Area C si attraversano da varchi puntuali; ZTL e aree pedonali sono poligoni.
+    public var hasGates: Bool {
+        self == .areaC || self == .areaB
     }
 }
 

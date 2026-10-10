@@ -34,6 +34,17 @@ public enum Geo {
         return (degrees + 360).truncatingRemainder(dividingBy: 360)
     }
 
+    /// Punto raggiunto partendo da `start` e percorrendo `distance` metri in direzione `bearing`.
+    public static func destination(from start: Coordinate, bearing: Double, distance: Double) -> Coordinate {
+        let lat1 = radians(start.latitude)
+        let lon1 = radians(start.longitude)
+        let angle = radians(bearing)
+        let delta = distance / earthRadius
+        let lat2 = asin(sin(lat1) * cos(delta) + cos(lat1) * sin(delta) * cos(angle))
+        let lon2 = lon1 + atan2(sin(angle) * sin(delta) * cos(lat1), cos(delta) - sin(lat1) * sin(lat2))
+        return Coordinate(latitude: lat2 * 180 / .pi, longitude: lon2 * 180 / .pi)
+    }
+
     /// Differenza minima tra due direzioni, in gradi (0...180).
     public static func angleDifference(_ a: Double, _ b: Double) -> Double {
         let d = abs(a - b).truncatingRemainder(dividingBy: 360)

@@ -6,7 +6,7 @@ struct GateLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: GateActivityAttributes.self) { context in
             GateActivityView(state: context.state)
-                .activityBackgroundTint(Color.black.opacity(0.75))
+                .activityBackgroundTint(context.state.status == .clear ? Color.black.opacity(0.75) : context.state.tint)
                 .activitySystemActionForegroundColor(.white)
         } dynamicIsland: { context in
             DynamicIsland {
@@ -53,37 +53,47 @@ struct GateActivityView: View {
         }
     }
 
-    /// Layout grande e leggibile a colpo d'occhio, pensato per lo schermo CarPlay.
+    /// Formato CarPlay: sopra la mappa di Google Maps, deve leggersi con un'occhiata.
+    /// A strada libera resta solo un piccolo scudo, per coprire il meno possibile.
+    @ViewBuilder
     private var compact: some View {
-        HStack(spacing: 10) {
+        if state.status == .clear {
             Image(systemName: state.symbol)
-                .font(.system(size: 34, weight: .bold))
+                .font(.system(size: 22, weight: .bold))
                 .foregroundStyle(state.tint)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(state.distanceText)
-                    .font(.system(size: 28, weight: .heavy))
-                    .monospacedDigit()
-                Text(state.status == .clear ? "Via libera" : state.gateName)
-                    .font(.caption.bold())
-                    .lineLimit(1)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else {
+            HStack(spacing: 10) {
+                Image(systemName: state.symbol)
+                    .font(.system(size: 34, weight: .bold))
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(state.distanceText)
+                        .font(.system(size: 30, weight: .heavy))
+                        .monospacedDigit()
+                    Text(state.headline)
+                        .font(.caption.bold())
+                        .lineLimit(1)
+                }
             }
+            .foregroundStyle(.white)
+            .padding(8)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(state.tint)
         }
-        .foregroundStyle(.white)
-        .padding(8)
     }
 
     private var regular: some View {
         HStack(spacing: 14) {
             Image(systemName: state.symbol)
                 .font(.system(size: 40, weight: .bold))
-                .foregroundStyle(state.tint)
+                .foregroundStyle(state.status == .clear ? state.tint : .white)
             VStack(alignment: .leading, spacing: 4) {
                 Text(state.headline)
                     .font(.headline)
                     .lineLimit(1)
                 Text("Veicolo: \(state.vehicle)")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .opacity(0.8)
             }
             Spacer()
             Text(state.distanceText)

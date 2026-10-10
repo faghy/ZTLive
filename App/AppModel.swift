@@ -26,9 +26,20 @@ final class AppModel: ObservableObject {
     @Published private(set) var gpsUpdates = 0
     @Published private(set) var authorization: CLAuthorizationStatus = .notDetermined
     @Published private(set) var gatesCount = 0
+    @Published private(set) var zonesCount = 0
+    @Published private(set) var connectedDevice: VehicleDetector.Device?
+    /// Il veicolo è stato scelto automaticamente dal dispositivo collegato.
+    @Published private(set) var vehicleIsAutomatic = false
 
     @Published var vehicle: Vehicle {
-        didSet { defaults.set(vehicle.rawValue, forKey: "vehicle") }
+        didSet {
+            defaults.set(vehicle.rawValue, forKey: "vehicle")
+            // Una scelta manuale con un dispositivo collegato viene ricordata per le prossime volte.
+            if !isApplyingDetection, let connectedDevice {
+                vehicleDetector.associate(connectedDevice, with: vehicle)
+                vehicleIsAutomatic = true
+            }
+        }
     }
     @Published var voiceEnabled: Bool {
         didSet { defaults.set(voiceEnabled, forKey: "voiceEnabled") }
@@ -36,7 +47,10 @@ final class AppModel: ObservableObject {
     @Published var includeAreaB: Bool {
         didSet { defaults.set(includeAreaB, forKey: "includeAreaB") }
     }
-    /// Solo per le prove: avvisa anche fuori dagli orari di Area B/C.
+    @Published var includeLocalZones: Bool {
+        didSet { defaults.set(includeLocalZones, forKey: "includeLocalZones") }
+    }
+    /// Solo per le prove: avvisa anche fuori dagli orari.
     @Published var ignoreSchedule: Bool {
         didSet { defaults.set(ignoreSchedule, forKey: "ignoreSchedule") }
     }
@@ -48,10 +62,13 @@ final class AppModel: ObservableObject {
     private let location = LocationService()
     private let liveActivity = LiveActivityManager()
     private let speaker = Speaker()
+    private let vehicleDetector = VehicleDetector()
     private let gates: [Gate]
+    private let localZones: [LocalZone]
     private var announced: [String: State.Status] = [:]
     private var simulationTimer: Timer?
     private var simulatedDistance = 0.0
+    private var isApplyingDetection = false
 
     var liveActivitiesEnabled: Bool {
         liveActivity.areActivitiesEnabled
@@ -62,9 +79,12 @@ final class AppModel: ObservableObject {
         vehicle = Vehicle(rawValue: defaults.string(forKey: "vehicle") ?? "") ?? .auto
         voiceEnabled = defaults.object(forKey: "voiceEnabled") as? Bool ?? true
         includeAreaB = defaults.bool(forKey: "includeAreaB")
-        ignoreSchedule = defaults.object(forKey: "ignoreSchedule") as? Bool ?? true
+        includeLocalZones = defaults.object(forKey: "includeLocalZones") as? Bool ?? true
+        ignoreSchedule = defaults.object(forKey: "ignoreSchedule") as? Bool ?? false
         gates = Self.loadGates()
+        localZones = Self.loadLocalZones()
         gatesCount = gates.count
+        zonesCount = localZones.count
         authorization = location.authorizationStatus
 
         location.onUpdate = { [weak self] location in
@@ -73,6 +93,10 @@ final class AppModel: ObservableObject {
         location.onAuthorizationChange = { [weak self] status in
             self?.authorization = status
         }
+        vehicleDetector.onChange = { [weak self] device in
+            self?.apply(device)
+        }
+        apply(vehicleDetector.current)
     }
 
     // MARK: - Comandi
@@ -109,18 +133,38 @@ final class AppModel: ObservableObject {
         mode = .off
     }
 
+    // MARK: - Veicolo
+
+    private func apply(_ device: VehicleDetector.Device?) {
+        connectedDevice = device
+        guard let device, let detected = vehicleDetector.vehicle(for: device) else {
+            vehicleIsAutomatic = false
+            return
+        }
+        isApplyingDetection = true
+        vehicle = detected
+        isApplyingDetection = false
+        vehicleIsAutomatic = true
+    }
+
     // MARK: - Logica
 
     private func handle(_ location: CLLocation) {
         gpsUpdates += 1
         guard mode == .real else { return }
 
-        // Con l'auto ferma la direzione GPS non è affidabile.
+        // Da fermi la direzione GPS non è affidabile.
         let course = location.course >= 0 && location.speed > 1.5 ? location.course : nil
         let position = Coordinate(latitude: location.coordinate.latitude, longitude: location.coordinate.longitude)
         let now = Date()
-        let monitor = GateMonitor(gates: gates.filter { isRelevant($0.zone, at: now) })
-        present(monitor.nearestGate(from: position, course: course))
+
+        let gateMonitor = GateMonitor(gates: gates.filter { isRelevant($0.zone, at: now) })
+        let zoneMonitor = ZoneMonitor(zones: includeLocalZones ? localZones.filter { isRelevant($0, at: now) } : [])
+        let candidates = [
+            gateMonitor.nearestGate(from: position, course: course),
+            zoneMonitor.approach(from: position, course: course),
+        ].compactMap { $0 }
+        present(candidates.min { $0.distance < $1.distance })
     }
 
     private func simulationTick() {
@@ -140,8 +184,15 @@ final class AppModel: ObservableObject {
         switch zone {
         case .areaC: return vehicle == .auto && active
         case .areaB: return includeAreaB && active
-        case .ztl: return true
+        case .ztl, .pedestrian: return true
         }
+    }
+
+    private func isRelevant(_ zone: LocalZone, at date: Date) -> Bool {
+        if vehicle == .moto && zone.motoAllowed {
+            return false
+        }
+        return ignoreSchedule || zone.isActive(at: date)
     }
 
     private func present(_ approach: Approach?) {
@@ -155,51 +206,60 @@ final class AppModel: ObservableObject {
         let status: State.Status = approach.distance <= Self.imminentDistance ? .imminent : .approaching
         state = State(
             status: status,
-            gateName: approach.gate.name,
-            zone: approach.gate.zone.label,
+            gateName: approach.name,
+            zone: approach.zone.label,
             distance: Int((approach.distance / 10).rounded()) * 10,
             vehicle: vehicle.label
         )
 
-        // Avvisa solo quando il livello sale, una volta per varco.
-        announced = announced.filter { $0.key == approach.gate.id }
-        let previous = announced[approach.gate.id] ?? .clear
+        // Avvisa solo quando il livello sale, una volta per varco o zona.
+        announced = announced.filter { $0.key == approach.id }
+        let previous = announced[approach.id] ?? .clear
         guard status > previous else {
             liveActivity.update(state)
             return
         }
-        announced[approach.gate.id] = status
+        announced[approach.id] = status
 
-        let message = spokenMessage(for: approach, status: status)
+        let subject = approach.zone.hasGates ? "Varco \(approach.zone.label)" : approach.zone.label
         liveActivity.update(state, alert: AlertConfiguration(
-            title: "Varco \(state.zone)",
-            body: "\(state.gateName) tra \(state.distance) m",
+            title: "\(subject)",
+            body: "\(approach.name) tra \(state.distance) m",
             sound: .default
         ))
         if voiceEnabled {
-            speaker.say(message)
+            speaker.say(spokenMessage(subject: subject, approach: approach, status: status))
         }
     }
 
-    private func spokenMessage(for approach: Approach, status: State.Status) -> String {
-        let zone = approach.gate.zone.label
+    private func spokenMessage(subject: String, approach: Approach, status: State.Status) -> String {
         if status == .imminent {
-            return "Attenzione, varco \(zone) \(approach.gate.name) a \(state.distance) metri."
+            return "Attenzione, \(subject) \(approach.name) a \(state.distance) metri."
         }
         let rounded = Int((approach.distance / 50).rounded()) * 50
-        return "Varco \(zone) \(approach.gate.name) tra \(rounded) metri."
+        return "\(subject) \(approach.name) tra \(rounded) metri."
+    }
+
+    private static func resource(_ name: String, _ ext: String) -> Data? {
+        guard let url = Bundle.main.url(forResource: name, withExtension: ext) else {
+            print("Risorsa \(name).\(ext) mancante")
+            return nil
+        }
+        return try? Data(contentsOf: url)
     }
 
     private static func loadGates() -> [Gate] {
         let files: [(String, Zone)] = [("areac_varchi", .areaC), ("areab_varchi", .areaB)]
         return files.flatMap { name, zone -> [Gate] in
-            guard let url = Bundle.main.url(forResource: name, withExtension: "geojson"),
-                  let data = try? Data(contentsOf: url),
-                  let gates = try? GateLoader.load(geoJSON: data, zone: zone) else {
-                print("Dataset \(name) non caricato")
-                return []
-            }
+            guard let data = resource(name, "geojson"),
+                  let gates = try? GateLoader.load(geoJSON: data, zone: zone) else { return [] }
             return gates
         }
+    }
+
+    private static func loadLocalZones() -> [LocalZone] {
+        guard let data = resource("zone_locali", "json"),
+              let zones = try? LocalZoneLoader.load(json: data) else { return [] }
+        return zones
     }
 }

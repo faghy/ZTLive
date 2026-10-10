@@ -1,16 +1,25 @@
 import Foundation
 
+/// Varco o zona verso cui ci si sta dirigendo.
 public struct Approach: Equatable, Sendable {
-    public let gate: Gate
-    /// Distanza dal varco in metri.
+    public let id: String
+    public let name: String
+    public let zone: Zone
+    /// Distanza in metri.
     public let distance: Double
-    /// `true` se il varco è nella direzione di marcia.
+    /// `true` se è nella direzione di marcia.
     public let isAhead: Bool
 
-    public init(gate: Gate, distance: Double, isAhead: Bool) {
-        self.gate = gate
+    public init(id: String, name: String, zone: Zone, distance: Double, isAhead: Bool) {
+        self.id = id
+        self.name = name
+        self.zone = zone
         self.distance = distance
         self.isAhead = isAhead
+    }
+
+    public init(gate: Gate, distance: Double, isAhead: Bool) {
+        self.init(id: gate.id, name: gate.name, zone: gate.zone, distance: distance, isAhead: isAhead)
     }
 }
 

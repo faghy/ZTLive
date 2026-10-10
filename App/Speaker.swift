@@ -8,10 +8,11 @@ final class Speaker: NSObject, AVSpeechSynthesizerDelegate {
     override init() {
         super.init()
         synthesizer.delegate = self
+        // Impostare la categoria non interrompe l'audio degli altri finché la sessione non è attiva.
+        try? session.setCategory(.playback, mode: .voicePrompt, options: [.duckOthers, .interruptSpokenAudioAndMixWithOthers])
     }
 
     func say(_ text: String) {
-        try? session.setCategory(.playback, mode: .voicePrompt, options: [.duckOthers, .interruptSpokenAudioAndMixWithOthers])
         try? session.setActive(true)
         let utterance = AVSpeechUtterance(string: text)
         utterance.voice = AVSpeechSynthesisVoice(language: "it-IT")

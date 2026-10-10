@@ -4,21 +4,17 @@ App iOS che avvisa quando ti avvicini a un varco ZTL di Milano (Area C, Area B, 
 
 Gli avvisi arrivano come **Live Activity**, visibile su CarPlay, schermata di blocco e Dynamic Island, e opzionalmente a voce.
 
-## Stato: prototipo
+## Funzioni
 
-Questo primo prototipo serve a verificare che:
+- **Varchi di Area C e Area B** dagli open data del Comune di Milano: avviso circa 400 m prima del varco nella direzione di marcia, livello "imminente" sotto i 120 m.
+- **ZTL locali e aree pedonali** (Brera, Sarpi, Navigli, Ticinese…): avviso quando la direzione di marcia porta dentro la zona, fino a 300 m prima.
+- **Orari**: Area B e C nei feriali 7:30–19:30, festivi esclusi (nazionali e Sant'Ambrogio). Per ZTL e aree pedonali valgono gli orari riportati nelle note del dataset; dove mancano la zona è considerata sempre attiva.
+- **Auto o moto**: in moto si ignorano l'Area C e le zone in cui le deroghe ammettono le moto. Il veicolo viene riconosciuto dal dispositivo collegato (CarPlay, interfono) dopo averlo scelto una volta.
+- **Live Activity** colorata (arancione in avvicinamento, rosso se imminente), visibile su CarPlay anche sopra Google Maps; a strada libera si riduce a un piccolo scudo verde.
+- **Avvisi vocali** opzionali, che abbassano per un attimo la navigazione o la musica.
+- **Simulazione** per provare Live Activity e CarPlay da fermi.
 
-1. la Live Activity si aggiorni in background mentre Google Maps è in primo piano;
-2. la Live Activity compaia su CarPlay, in auto e sul TFT della moto;
-3. l'app si installi e funzioni con un Apple ID gratuito tramite SideStore.
-
-Funzioni presenti:
-
-- varchi di Area C e Area B dagli open data del Comune di Milano;
-- avviso circa 400 m prima del varco nella direzione di marcia, livello "imminente" sotto i 120 m;
-- filtro per veicolo: in moto l'Area C viene ignorata;
-- orari di Area B e Area C (feriali 7:30–19:30), disattivabili per le prove;
-- modalità simulazione, per provare Live Activity e CarPlay da fermi.
+Verificato su iPhone 15 Pro Max con iOS 27.0.1: aggiornamento in background con Google Maps aperto, CarPlay in auto e sul TFT di una Honda Africa Twin (audio nel casco con interfono collegato).
 
 ## Struttura
 
@@ -28,7 +24,8 @@ Funzioni presenti:
 | `App` | App SwiftUI: GPS in background, Live Activity, voce |
 | `Widget` | Estensione con la grafica della Live Activity |
 | `Shared` | Modello dati condiviso tra app ed estensione |
-| `Resources` | Dataset dei varchi in GeoJSON |
+| `Resources` | Varchi (GeoJSON del Comune) e zone locali (`zone_locali.json`) |
+| `tools/build_zone_data.py` | Rigenera `zone_locali.json` dal dataset ds51, con orari ed esclusioni |
 | `project.yml` | Definizione del progetto per XcodeGen |
 
 ## Build
@@ -55,6 +52,8 @@ Fonte: [Portale Open Data del Comune di Milano](https://dati.comune.milano.it), 
 
 - [Varchi Area C](https://dati.comune.milano.it/dataset/ds82_infogeo_varchi_elettronici_localizzazione_) (ds82)
 - [Varchi Area B](https://dati.comune.milano.it/dataset/ds959-varchi-areab) (ds959)
-- [Aree pedonali e ZTL](https://dati.comune.milano.it/dataset/ds51_trafficotrasporti_aree_pedonali_ztl) (ds51), da integrare nelle prossime versioni
+- [Aree pedonali e ZTL](https://dati.comune.milano.it/dataset/ds51_trafficotrasporti_aree_pedonali_ztl) (ds51)
+
+Per aggiornare le zone locali: `python3 tools/build_zone_data.py`.
 
 Le informazioni hanno valore indicativo: fanno fede la segnaletica e gli atti ufficiali del Comune.

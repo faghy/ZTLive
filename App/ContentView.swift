@@ -25,21 +25,34 @@ struct ContentView: View {
                             .monospacedDigit()
                     }
                     LabeledContent("Aggiornamenti GPS", value: "\(model.gpsUpdates)")
-                    LabeledContent("Varchi caricati", value: "\(model.gatesCount)")
+                    LabeledContent("Varchi e zone", value: "\(model.gatesCount) varchi · \(model.zonesCount) zone")
                     LabeledContent("Posizione", value: authorizationText)
                     LabeledContent("Live Activity", value: model.liveActivitiesEnabled ? "Abilitate" : "Disabilitate")
                 }
 
-                Section("Impostazioni") {
+                Section {
                     Picker("Veicolo", selection: $model.vehicle) {
                         ForEach(Vehicle.allCases) { vehicle in
                             Text(vehicle.label).tag(vehicle)
                         }
                     }
                     .pickerStyle(.segmented)
+                    LabeledContent("Collegato a", value: deviceText)
+                } header: {
+                    Text("Veicolo")
+                } footer: {
+                    Text("Con CarPlay o l'interfono collegati, scegli il veicolo una volta: ZTLive lo ricorderà e lo selezionerà da solo le volte successive.")
+                }
+
+                Section {
                     Toggle("Avvisi vocali", isOn: $model.voiceEnabled)
+                    Toggle("ZTL e aree pedonali", isOn: $model.includeLocalZones)
                     Toggle("Varchi Area B", isOn: $model.includeAreaB)
                     Toggle("Ignora orari (prove)", isOn: $model.ignoreSchedule)
+                } header: {
+                    Text("Avvisi")
+                } footer: {
+                    Text("Area C: solo in auto, feriali 7:30-19:30 esclusi i festivi. ZTL e aree pedonali: sempre attive, salvo gli orari indicati dal Comune; ignorate in moto se le moto sono ammesse.")
                 }
 
                 Section {
@@ -63,6 +76,11 @@ struct ContentView: View {
         case .real: return "Monitoraggio reale"
         case .simulation: return "Simulazione"
         }
+    }
+
+    private var deviceText: String {
+        guard let device = model.connectedDevice else { return "Nessun dispositivo" }
+        return model.vehicleIsAutomatic ? "\(device.name) (automatico)" : device.name
     }
 
     private var authorizationText: String {
