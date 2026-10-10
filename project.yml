@@ -81,8 +81,6 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.faghy.ztlive.share
-        # Serve per aprire Google Maps dall'estensione tramite la catena dei responder.
-        APPLICATION_EXTENSION_API_ONLY: "NO"
     info:
       path: Generated/Share-Info.plist
       properties:

@@ -1,6 +1,7 @@
 import SwiftUI
 import UIKit
 import UniformTypeIdentifiers
+import ZTLCore
 
 /// Riceve il percorso condiviso da Google Maps (Condividi → ZTLive) e mostra l'esito del controllo.
 final class ShareViewController: UIViewController {
@@ -41,21 +42,20 @@ final class ShareViewController: UIViewController {
         return texts.joined(separator: " ")
     }
 
-    /// Le estensioni non possono aprire link direttamente: si passa dall'applicazione nella catena dei responder.
-    /// Se non è possibile, il link viene copiato per incollarlo in Google Maps.
+    /// Le estensioni non possono aprire link: si chiama `openURL:options:completionHandler:`
+    /// sull'applicazione trovata nella catena dei responder. Se non è possibile, il link viene copiato.
     private func openInGoogleMaps(_ url: URL) {
-        guard application() != nil else {
+        let selector = NSSelectorFromString("openURL:options:completionHandler:")
+        guard let application = application(), application.responds(to: selector) else {
             UIPasteboard.general.url = url
             model.notice = "Link copiato: aprilo incollandolo in Safari o in Google Maps."
             return
         }
-        GoogleMapsOpener.open(url) { [weak self] target, completion in
-            self?.application()?.open(target, options: [:]) { success in
-                completion(success)
-                if success {
-                    self?.extensionContext?.completeRequest(returningItems: nil)
-                }
-            }
+        typealias OpenURL = @convention(c) (AnyObject, Selector, NSURL, NSDictionary, AnyObject?) -> Void
+        let openURL = unsafeBitCast(application.method(for: selector), to: OpenURL.self)
+        openURL(application, selector, (GoogleMapsLink.appURL(for: url) ?? url) as NSURL, NSDictionary(), nil)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            self?.extensionContext?.completeRequest(returningItems: nil)
         }
     }
 
