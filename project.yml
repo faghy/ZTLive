@@ -7,8 +7,8 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.0"
-    MARKETING_VERSION: "0.2.0"
-    CURRENT_PROJECT_VERSION: "2"
+    MARKETING_VERSION: "0.3.0"
+    CURRENT_PROJECT_VERSION: "3"
     TARGETED_DEVICE_FAMILY: "1"
 
 packages:
@@ -22,11 +22,13 @@ targets:
     sources:
       - App
       - Shared
+      - RouteCheck
       - path: Resources
         buildPhase: resources
     dependencies:
       - package: ZTLCore
       - target: ZTLiveWidget
+      - target: ZTLiveShare
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.faghy.ztlive
@@ -43,6 +45,9 @@ targets:
           - audio
         NSLocationWhenInUseUsageDescription: ZTLive usa la posizione per avvisarti quando ti avvicini a un varco ZTL, anche mentre usi Google Maps.
         NSLocationAlwaysAndWhenInUseUsageDescription: ZTLive usa la posizione per avvisarti quando ti avvicini a un varco ZTL, anche mentre usi Google Maps.
+        LSApplicationQueriesSchemes:
+          - comgooglemaps
+          - comgooglemapsurl
         NSSupportsLiveActivities: true
         NSSupportsLiveActivitiesFrequentUpdates: true
     scheme: {}
@@ -62,3 +67,31 @@ targets:
         CFBundleDisplayName: ZTLive
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
+
+  ZTLiveShare:
+    type: app-extension
+    platform: iOS
+    sources:
+      - ShareExtension
+      - RouteCheck
+      - path: Resources
+        buildPhase: resources
+    dependencies:
+      - package: ZTLCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.faghy.ztlive.share
+        # Serve per aprire Google Maps dall'estensione tramite la catena dei responder.
+        APPLICATION_EXTENSION_API_ONLY: "NO"
+    info:
+      path: Generated/Share-Info.plist
+      properties:
+        CFBundleDisplayName: ZTLive
+        NSLocationWhenInUseUsageDescription: ZTLive usa la posizione per controllare i percorsi che partono da dove ti trovi.
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.share-services
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ShareViewController
+          NSExtensionAttributes:
+            NSExtensionActivationRule:
+              NSExtensionActivationSupportsWebURLWithMaxCount: 1
+              NSExtensionActivationSupportsText: true

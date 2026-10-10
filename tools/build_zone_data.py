@@ -19,7 +19,9 @@ SOURCE_URL = (
 )
 OUTPUT = Path(__file__).resolve().parent.parent / "Resources" / "zone_locali.json"
 
-KINDS = {"ZTL": "ztl", "AP": "pedestrian"}
+KINDS = {"ZTL": "ztl", "AP": "pedestrian", "AREA_C": "areaC", "AREA_B": "areaB"}
+# Perimetri di Area B e C: servono a controllare i percorsi; durante la guida si usano i varchi.
+NAMES = {"AREA_C": "Area C", "AREA_B": "Area B"}
 
 ALL_DAYS = [1, 2, 3, 4, 5, 6, 7]  # 1 = lunedì ... 7 = domenica
 
@@ -92,7 +94,7 @@ def main():
             continue
         zones.append({
             "id": zone_id,
-            "name": pretty_name(properties["nome"]),
+            "name": NAMES.get(properties["tipo"]) or pretty_name(properties["nome"]),
             "kind": kind,
             "motoAllowed": bool(MOTO_ALLOWED.search(properties.get("deroghe") or "")),
             "schedule": SCHEDULES.get(zone_id),

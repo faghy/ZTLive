@@ -19,6 +19,7 @@ Gli avvisi arrivano come **Live Activity**, visibile su CarPlay, schermata di bl
 - **Auto o moto**: in moto si ignorano l'Area C e le zone in cui le deroghe ammettono le moto. Il veicolo viene riconosciuto dal dispositivo collegato (CarPlay, interfono) dopo averlo scelto una volta.
 - **Live Activity** colorata (arancione in avvicinamento, rosso se imminente), visibile su CarPlay anche sopra Google Maps; a strada libera si riduce a un piccolo scudo verde.
 - **Avvisi vocali** opzionali, che abbassano per un attimo la navigazione o la musica.
+- **Controllo del percorso prima di partire**: condividi un percorso da Google Maps a ZTLive (Condividi → ZTLive) o incollane il link nella scheda *Percorso*. ZTLive lo ricalcola con Apple Maps, elenca le zone attraversate con l'orario stimato di passaggio e, se un'alternativa di Apple Maps le evita, riapre Google Maps con tappe che la seguono.
 - **Simulazione** per provare Live Activity e CarPlay da fermi.
 
 Verificato su iPhone 15 Pro Max con iOS 27.0.1: aggiornamento in background con Google Maps aperto, CarPlay in auto e sul TFT di una Honda Africa Twin (audio nel casco con interfono collegato).
@@ -30,6 +31,8 @@ Verificato su iPhone 15 Pro Max con iOS 27.0.1: aggiornamento in background con 
 | `Packages/ZTLCore` | Logica pura (geometria, varchi, orari), testata anche su Linux |
 | `App` | App SwiftUI: GPS in background, Live Activity, voce |
 | `Widget` | Estensione con la grafica della Live Activity |
+| `RouteCheck` | Controllo percorso (link di Google Maps → percorsi Apple Maps → zone attraversate), condiviso da app ed estensione di condivisione |
+| `ShareExtension` | Estensione "Condividi → ZTLive" che riceve i percorsi da Google Maps |
 | `Shared` | Modello dati condiviso tra app ed estensione |
 | `Resources` | Varchi (GeoJSON del Comune) e zone locali (`zone_locali.json`) |
 | `tools/make_artwork.py` | Rigenera icona, logo e GIF dimostrativa |

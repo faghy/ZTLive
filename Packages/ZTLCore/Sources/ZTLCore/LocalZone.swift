@@ -14,7 +14,8 @@ public struct WeeklyWindow: Codable, Equatable, Sendable {
     }
 }
 
-/// ZTL o area pedonale delimitata da un poligono (dataset ds51 del Comune di Milano).
+/// Zona delimitata da un poligono (dataset ds51 del Comune di Milano): ZTL, area pedonale,
+/// o il perimetro di Area B / Area C usato per controllare i percorsi.
 public struct LocalZone: Identifiable, Sendable {
     public let id: String
     public let name: String
@@ -91,6 +92,11 @@ struct BoundingBox: Sendable {
         (minLatitude...maxLatitude).contains(point.latitude) && (minLongitude...maxLongitude).contains(point.longitude)
     }
 
+    func intersects(_ other: BoundingBox) -> Bool {
+        minLatitude <= other.maxLatitude && maxLatitude >= other.minLatitude
+            && minLongitude <= other.maxLongitude && maxLongitude >= other.minLongitude
+    }
+
     func expanded(by meters: Double) -> BoundingBox {
         let dLat = meters / 111_195
         let dLon = meters / (111_195 * cos(minLatitude * .pi / 180))
@@ -117,6 +123,8 @@ public enum LocalZoneLoader {
             switch zone.kind {
             case "ztl": kind = .ztl
             case "pedestrian": kind = .pedestrian
+            case "areaC": kind = .areaC
+            case "areaB": kind = .areaB
             default: return nil
             }
             let rings = zone.rings.map { ring in

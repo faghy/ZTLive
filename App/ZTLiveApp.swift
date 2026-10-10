@@ -6,8 +6,13 @@ struct ZTLiveApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .environmentObject(model)
+            TabView {
+                ContentView()
+                    .environmentObject(model)
+                    .tabItem { Label("Avvisi", systemImage: "exclamationmark.shield") }
+                RouteScreen()
+                    .tabItem { Label("Percorso", systemImage: "point.topleft.down.to.point.bottomright.curvepath") }
+            }
         }
     }
 }

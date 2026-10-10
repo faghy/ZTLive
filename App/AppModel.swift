@@ -3,14 +3,6 @@ import CoreLocation
 import Foundation
 import ZTLCore
 
-enum Vehicle: String, CaseIterable, Identifiable {
-    case auto
-    case moto
-
-    var id: String { rawValue }
-    var label: String { self == .auto ? "Auto" : "Moto" }
-}
-
 enum RunMode {
     case off
     case real
@@ -63,8 +55,9 @@ final class AppModel: ObservableObject {
     private let liveActivity = LiveActivityManager()
     private let speaker = Speaker()
     private let vehicleDetector = VehicleDetector()
-    private let gates: [Gate]
-    private let localZones: [LocalZone]
+    private let gates = ZoneData.gates
+    /// Durante la guida Area B e C si controllano dai varchi, non dal perimetro.
+    private let localZones = ZoneData.zones.filter { !$0.zone.hasGates }
     private var announced: [String: State.Status] = [:]
     private var simulationTimer: Timer?
     private var simulatedDistance = 0.0
@@ -81,8 +74,6 @@ final class AppModel: ObservableObject {
         includeAreaB = defaults.bool(forKey: "includeAreaB")
         includeLocalZones = defaults.object(forKey: "includeLocalZones") as? Bool ?? true
         ignoreSchedule = defaults.object(forKey: "ignoreSchedule") as? Bool ?? false
-        gates = Self.loadGates()
-        localZones = Self.loadLocalZones()
         gatesCount = gates.count
         zonesCount = localZones.count
         authorization = location.authorizationStatus
@@ -158,8 +149,9 @@ final class AppModel: ObservableObject {
         let position = Coordinate(latitude: location.coordinate.latitude, longitude: location.coordinate.longitude)
         let now = Date()
 
-        let gateMonitor = GateMonitor(gates: gates.filter { isRelevant($0.zone, at: now) })
-        let zoneMonitor = ZoneMonitor(zones: includeLocalZones ? localZones.filter { isRelevant($0, at: now) } : [])
+        let rules = self.rules
+        let gateMonitor = GateMonitor(gates: gates.filter { rules.applies(to: $0.zone, at: now) })
+        let zoneMonitor = ZoneMonitor(zones: localZones.filter { rules.applies(to: $0, at: now) })
         let candidates = [
             gateMonitor.nearestGate(from: position, course: course),
             zoneMonitor.approach(from: position, course: course),
@@ -179,20 +171,13 @@ final class AppModel: ObservableObject {
         present(Approach(gate: gate, distance: simulatedDistance, isAhead: true))
     }
 
-    private func isRelevant(_ zone: Zone, at date: Date) -> Bool {
-        let active = ignoreSchedule || ZoneSchedule.isAreaActive(at: date)
-        switch zone {
-        case .areaC: return vehicle == .auto && active
-        case .areaB: return includeAreaB && active
-        case .ztl, .pedestrian: return true
-        }
-    }
-
-    private func isRelevant(_ zone: LocalZone, at date: Date) -> Bool {
-        if vehicle == .moto && zone.motoAllowed {
-            return false
-        }
-        return ignoreSchedule || zone.isActive(at: date)
+    private var rules: ZoneRules {
+        ZoneRules(
+            isMotorcycle: vehicle == .moto,
+            includeAreaB: includeAreaB,
+            includeLocalZones: includeLocalZones,
+            ignoreSchedule: ignoreSchedule
+        )
     }
 
     private func present(_ approach: Approach?) {
@@ -238,28 +223,5 @@ final class AppModel: ObservableObject {
         }
         let rounded = Int((approach.distance / 50).rounded()) * 50
         return "\(subject) \(approach.name) tra \(rounded) metri."
-    }
-
-    private static func resource(_ name: String, _ ext: String) -> Data? {
-        guard let url = Bundle.main.url(forResource: name, withExtension: ext) else {
-            print("Risorsa \(name).\(ext) mancante")
-            return nil
-        }
-        return try? Data(contentsOf: url)
-    }
-
-    private static func loadGates() -> [Gate] {
-        let files: [(String, Zone)] = [("areac_varchi", .areaC), ("areab_varchi", .areaB)]
-        return files.flatMap { name, zone -> [Gate] in
-            guard let data = resource(name, "geojson"),
-                  let gates = try? GateLoader.load(geoJSON: data, zone: zone) else { return [] }
-            return gates
-        }
-    }
-
-    private static func loadLocalZones() -> [LocalZone] {
-        guard let data = resource("zone_locali", "json"),
-              let zones = try? LocalZoneLoader.load(json: data) else { return [] }
-        return zones
     }
 }

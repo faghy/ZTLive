@@ -19,6 +19,7 @@ Alerts are shown as a **Live Activity**, visible on CarPlay, the Lock Screen and
 - **Car or motorcycle**: on a motorcycle, Area C and zones whose exemptions allow motorcycles are ignored. The vehicle is recognised from the connected device (CarPlay, helmet intercom) after you pick it once.
 - **Colour-coded Live Activity** (orange when approaching, red when imminent), shown on CarPlay on top of Google Maps; when the road is clear it shrinks to a small green shield.
 - **Optional voice alerts** that briefly duck navigation or music.
+- **Route check before you leave**: share a route from Google Maps to ZTLive (Share → ZTLive) or paste its link in the *Route* tab. ZTLive recomputes it with Apple Maps, lists the zones it crosses with the estimated time you will pass them, and if an Apple Maps alternative avoids them, opens Google Maps with waypoints that follow it.
 - **Simulation mode** to test the Live Activity and CarPlay while parked.
 
 Tested on an iPhone 15 Pro Max running iOS 27.0.1: background updates with Google Maps in the foreground, CarPlay in a car and on the TFT display of a Honda Africa Twin (audio in the helmet with the intercom connected).
@@ -30,6 +31,8 @@ Tested on an iPhone 15 Pro Max running iOS 27.0.1: background updates with Googl
 | `Packages/ZTLCore` | Pure logic (geometry, gates, schedules), also tested on Linux |
 | `App` | SwiftUI app: background GPS, Live Activity, voice |
 | `Widget` | Extension that renders the Live Activity |
+| `RouteCheck` | Route check (Google Maps link → Apple Maps routes → crossed zones), shared by the app and the share extension |
+| `ShareExtension` | "Share → ZTLive" extension that receives routes from Google Maps |
 | `Shared` | Data model shared by the app and the extension |
 | `Resources` | Gates (City of Milan GeoJSON) and local zones (`zone_locali.json`) |
 | `tools/build_zone_data.py` | Regenerates `zone_locali.json` from dataset ds51, with schedules and exclusions |

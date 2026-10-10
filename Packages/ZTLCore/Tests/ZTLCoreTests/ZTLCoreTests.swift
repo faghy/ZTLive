@@ -203,3 +203,178 @@ final class WeeklyScheduleTests: XCTestCase {
         XCTAssertTrue(ZoneSchedule.isAreaActive(at: date("2026-12-09T10:00:00+01:00")))
     }
 }
+
+final class ZoneRulesTests: XCTestCase {
+    let mondayMorning = ISO8601DateFormatter().date(from: "2026-10-12T09:00:00+02:00")!
+    let ring = [
+        Coordinate(latitude: 45.0, longitude: 9.0), Coordinate(latitude: 45.0, longitude: 9.1),
+        Coordinate(latitude: 45.1, longitude: 9.1), Coordinate(latitude: 45.0, longitude: 9.0),
+    ]
+
+    func testMotorcycleSkipsAreaCAndAllowedZones() {
+        let moto = ZoneRules(isMotorcycle: true)
+        let car = ZoneRules()
+        XCTAssertFalse(moto.applies(to: .areaC, at: mondayMorning))
+        XCTAssertTrue(car.applies(to: .areaC, at: mondayMorning))
+
+        let ticinese = LocalZone(id: "ztl-194", name: "Ticinese", zone: .ztl, motoAllowed: true, schedule: nil, rings: [ring])
+        XCTAssertFalse(moto.applies(to: ticinese, at: mondayMorning))
+        XCTAssertTrue(car.applies(to: ticinese, at: mondayMorning))
+    }
+
+    func testAreaBOnlyWhenEnabled() {
+        XCTAssertFalse(ZoneRules().applies(to: .areaB, at: mondayMorning))
+        XCTAssertTrue(ZoneRules(includeAreaB: true).applies(to: .areaB, at: mondayMorning))
+    }
+
+    func testAreaCPolygonFollowsAreaSchedule() {
+        let areaC = LocalZone(id: "areaC-276", name: "Area C", zone: .areaC, motoAllowed: false, schedule: nil, rings: [ring])
+        let sunday = ISO8601DateFormatter().date(from: "2026-10-11T09:00:00+02:00")!
+        XCTAssertTrue(ZoneRules().applies(to: areaC, at: mondayMorning))
+        XCTAssertFalse(ZoneRules().applies(to: areaC, at: sunday))
+    }
+}
+
+final class RouteAnalyzerTests: XCTestCase {
+    let start = Coordinate(latitude: 45.4642, longitude: 9.1900)
+    let departure = ISO8601DateFormatter().date(from: "2026-10-12T09:00:00+02:00")!
+
+    /// Quadrato di circa 100 m centrato 500 m a nord di `start`.
+    func zone(_ kind: Zone = .ztl, id: String = "ztl-1") -> LocalZone {
+        let center = start.latitude + 0.0045
+        let ring = [
+            Coordinate(latitude: center - 0.00045, longitude: start.longitude - 0.0006),
+            Coordinate(latitude: center - 0.00045, longitude: start.longitude + 0.0006),
+            Coordinate(latitude: center + 0.00045, longitude: start.longitude + 0.0006),
+            Coordinate(latitude: center + 0.00045, longitude: start.longitude - 0.0006),
+            Coordinate(latitude: center - 0.00045, longitude: start.longitude - 0.0006),
+        ]
+        return LocalZone(id: id, name: "Prova", zone: kind, motoAllowed: false, schedule: nil, rings: [ring])
+    }
+
+    /// Percorso dritto verso nord per 1 km.
+    var straightRoute: [Coordinate] {
+        [start, Coordinate(latitude: start.latitude + 0.009, longitude: start.longitude)]
+    }
+
+    func testRouteThroughZoneIsReportedWithPassTime() throws {
+        let hits = RouteAnalyzer.hits(route: straightRoute, travelTime: 200, departure: departure, zones: [zone()], rules: ZoneRules())
+        let hit = try XCTUnwrap(hits.first)
+        XCTAssertEqual(hits.count, 1)
+        XCTAssertEqual(hit.zoneID, "ztl-1")
+        XCTAssertEqual(hit.distanceAlong, 450, accuracy: 20)
+        // Circa metà del percorso: ~90 secondi dopo la partenza.
+        XCTAssertEqual(hit.passTime.timeIntervalSince(departure), 90, accuracy: 5)
+    }
+
+    func testRouteAroundZoneIsClean() {
+        let east = start.longitude + 0.003
+        let route = [start, Coordinate(latitude: start.latitude, longitude: east), Coordinate(latitude: start.latitude + 0.009, longitude: east)]
+        XCTAssertTrue(RouteAnalyzer.hits(route: route, travelTime: 200, departure: departure, zones: [zone()], rules: ZoneRules()).isEmpty)
+    }
+
+    func testAreaCHitIsNamedAfterNearestGate() throws {
+        let gates = [
+            Gate(id: "areaC-1", name: "Porta Lontana", zone: .areaC, coordinate: Coordinate(latitude: start.latitude + 0.02, longitude: start.longitude)),
+            Gate(id: "areaC-2", name: "Porta Vicina", zone: .areaC, coordinate: Coordinate(latitude: start.latitude + 0.0041, longitude: start.longitude)),
+        ]
+        let hits = RouteAnalyzer.hits(route: straightRoute, travelTime: 200, departure: departure, zones: [zone(.areaC, id: "areaC-276")], gates: gates, rules: ZoneRules())
+        XCTAssertEqual(try XCTUnwrap(hits.first).name, "varco Porta Vicina")
+    }
+
+    func testDetourWaypointsFollowAlternativeNearTheZone() throws {
+        let hit = try XCTUnwrap(RouteAnalyzer.hits(route: straightRoute, travelTime: 200, departure: departure, zones: [zone()], rules: ZoneRules()).first)
+        let east = start.longitude + 0.003
+        let alternative = [start, Coordinate(latitude: start.latitude, longitude: east), Coordinate(latitude: start.latitude + 0.009, longitude: east), Coordinate(latitude: start.latitude + 0.009, longitude: start.longitude)]
+        let waypoints = RouteAnalyzer.detourWaypoints(alternative: alternative, avoiding: [hit])
+        XCTAssertEqual(waypoints.count, 1)
+        // Il punto scelto sta sulla strada parallela, all'altezza della zona.
+        XCTAssertEqual(waypoints[0].longitude, east, accuracy: 0.0001)
+        XCTAssertEqual(waypoints[0].latitude, hit.entry.latitude, accuracy: 0.0003)
+    }
+
+    func testDetourWaypointsAreLimited() {
+        let route = (0...40).map { Coordinate(latitude: start.latitude + Double($0) * 0.001, longitude: start.longitude) }
+        let hits = (1...6).map { index in
+            RouteHit(zoneID: "z\(index)", name: "", zone: .ztl, entry: route[index * 6], distanceAlong: 0, passTime: departure)
+        }
+        XCTAssertEqual(RouteAnalyzer.detourWaypoints(alternative: route, avoiding: hits, limit: 3).count, 3)
+    }
+}
+
+final class GoogleMapsLinkTests: XCTestCase {
+    func url(_ string: String) -> URL { URL(string: string)! }
+
+    func testFirstURLInSharedText() {
+        let text = "Indicazioni per Piazza Gae Aulenti: https://maps.app.goo.gl/AbC123xyz?g_st=ic"
+        XCTAssertEqual(GoogleMapsLink.firstURL(in: text)?.absoluteString, "https://maps.app.goo.gl/AbC123xyz?g_st=ic")
+        XCTAssertTrue(GoogleMapsLink.isShortLink(GoogleMapsLink.firstURL(in: text)!))
+    }
+
+    func testDirectionsPathWithPlaceCoordinatesInData() throws {
+        let link = url("https://www.google.com/maps/dir/Duomo+di+Milano/Piazza+Gae+Aulenti,+Milano/@45.47,9.18,14z/data=!3m1!4b1!4m14!4m13!1m5!1m1!1s0x4786c6aec34636a1:0xab7f4e27101a2e13!2m2!1d9.1916!2d45.4641!1m5!1m1!1s0x4786c6c5e6c4c7d5:0x2!2m2!1d9.1895!2d45.4840!3e0")
+        let route = try XCTUnwrap(GoogleMapsLink.parse(link))
+        XCTAssertTrue(route.isDriving)
+        XCTAssertEqual(route.points, [
+            .coordinate(Coordinate(latitude: 45.4641, longitude: 9.1916)),
+            .coordinate(Coordinate(latitude: 45.4840, longitude: 9.1895)),
+        ])
+    }
+
+    func testDirectionsPathFromCurrentLocation() throws {
+        let link = url("https://www.google.com/maps/dir//45.4840,9.1895/@45.47,9.18,14z/data=!4m2!4m1!3e0")
+        let route = try XCTUnwrap(GoogleMapsLink.parse(link))
+        XCTAssertEqual(route.points, [.currentLocation, .coordinate(Coordinate(latitude: 45.484, longitude: 9.1895))])
+    }
+
+    func testWalkingRouteIsDetected() throws {
+        let link = url("https://www.google.com/maps/dir/45.46,9.19/45.48,9.18/data=!4m2!4m1!3e2")
+        XCTAssertFalse(try XCTUnwrap(GoogleMapsLink.parse(link)).isDriving)
+    }
+
+    func testApiLinkWithWaypoints() throws {
+        let link = url("https://www.google.com/maps/dir/?api=1&origin=Duomo+Milano&destination=45.48,9.18&waypoints=45.47,9.17%7CCorso+Como&travelmode=driving")
+        let route = try XCTUnwrap(GoogleMapsLink.parse(link))
+        XCTAssertEqual(route.points, [
+            .query("Duomo Milano"),
+            .coordinate(Coordinate(latitude: 45.47, longitude: 9.17)),
+            .query("Corso Como"),
+            .coordinate(Coordinate(latitude: 45.48, longitude: 9.18)),
+        ])
+    }
+
+    func testLegacySaddrDaddr() throws {
+        let route = try XCTUnwrap(GoogleMapsLink.parse(url("https://maps.google.com/maps?saddr=My+Location&daddr=Via+Torino,+Milano")))
+        XCTAssertEqual(route.points, [.currentLocation, .query("Via Torino, Milano")])
+    }
+
+    func testPlaceLink() throws {
+        let link = url("https://www.google.com/maps/place/Arco+della+Pace/@45.4757,9.1724,17z/data=!3m1!4b1!4m6!3m5!1s0x0:0x0!8m2!3d45.4757!4d9.1724")
+        XCTAssertEqual(try XCTUnwrap(GoogleMapsLink.parse(link)).points, [.currentLocation, .coordinate(Coordinate(latitude: 45.4757, longitude: 9.1724))])
+    }
+
+    func testConsentPageIsUnwrapped() throws {
+        let inner = "https://www.google.com/maps/dir//45.484,9.1895/"
+        let consent = url("https://consent.google.com/m?continue=" + inner.addingPercentEncoding(withAllowedCharacters: .alphanumerics)! + "&gl=IT")
+        XCTAssertEqual(GoogleMapsLink.unwrapConsent(consent).absoluteString, inner)
+        XCTAssertEqual(try XCTUnwrap(GoogleMapsLink.parse(consent)).points.count, 2)
+    }
+
+    func testEmbeddedMapsURL() {
+        let html = #"<a href="https://www.google.com/maps/dir/A/B/@45,9,12z?entry=ttu&amp;g_ep=x">"#
+        XCTAssertEqual(GoogleMapsLink.embeddedMapsURL(in: html)?.absoluteString, "https://www.google.com/maps/dir/A/B/@45,9,12z?entry=ttu&g_ep=x")
+    }
+
+    func testDirectionsURLBuilder() throws {
+        let link = GoogleMapsLink.directionsURL(
+            origin: nil,
+            destination: Coordinate(latitude: 45.484, longitude: 9.1895),
+            waypoints: [Coordinate(latitude: 45.47, longitude: 9.17), Coordinate(latitude: 45.475, longitude: 9.175)]
+        )
+        let route = try XCTUnwrap(GoogleMapsLink.parse(link))
+        XCTAssertEqual(route.points.count, 4)
+        XCTAssertEqual(route.points.first, .currentLocation)
+        XCTAssertTrue(route.isDriving)
+        XCTAssertEqual(GoogleMapsLink.appURL(for: link)?.scheme, "comgooglemapsurl")
+    }
+}
