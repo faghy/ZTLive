@@ -82,6 +82,12 @@ struct RouteCheckSections: View {
             Text(analysis.mainHits.isEmpty ? "Esito" : "Il percorso attraversa")
         }
 
+        if let reopens = analysis.areaCReopens {
+            Section {
+                Label("Area C non attiva ora: riapre \(reopeningText(reopens))", systemImage: "info.circle")
+            }
+        }
+
         if !analysis.mainHits.isEmpty {
             Section {
                 if let alternative = analysis.cleanAlternative, let link = analysis.alternativeLink {
@@ -165,6 +171,20 @@ struct RouteCheckSections: View {
                 Text("Google Maps non accetta due mezzi nello stesso link: apri il primo tratto e, arrivato, torna qui per il secondo.")
             }
         }
+    }
+
+    /// "oggi alle 7:30", "domani alle 7:30", "lunedì alle 7:30".
+    private func reopeningText(_ date: Date) -> String {
+        let calendar = Calendar.current
+        let day: String
+        if calendar.isDateInToday(date) {
+            day = "oggi"
+        } else if calendar.isDateInTomorrow(date) {
+            day = "domani"
+        } else {
+            day = date.formatted(Date.FormatStyle().weekday(.wide).locale(Locale(identifier: "it_IT")))
+        }
+        return "\(day) alle \(date.formatted(Date.FormatStyle().hour(.defaultDigits(amPM: .omitted)).minute().locale(Locale(identifier: "it_IT"))))"
     }
 
     private func kilometers(_ meters: Double) -> String {

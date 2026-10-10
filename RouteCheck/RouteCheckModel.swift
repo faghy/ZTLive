@@ -6,6 +6,8 @@ import ZTLCore
 struct RouteAnalysis {
     let result: RouteCheckResult
     let hits: [[RouteHit]]
+    /// Se il percorso principale passa dall'Area C quando non è attiva: quando riapre.
+    var areaCReopens: Date?
 
     var mainHits: [RouteHit] { hits.first ?? [] }
 
@@ -124,9 +126,24 @@ final class RouteCheckModel: ObservableObject {
                 rules: rules
             )
         }
-        let analysis = RouteAnalysis(result: result, hits: hits)
+        var analysis = RouteAnalysis(result: result, hits: hits)
+        analysis.areaCReopens = inactiveAreaCReopening(result: result, hits: hits.first ?? [])
         phase = .done(analysis)
         nameSwitchPoint(analysis.switchPoint)
+    }
+
+    /// In auto, se il percorso entra nell'Area C ma non la conta perché spenta, quando riapre.
+    private func inactiveAreaCReopening(result: RouteCheckResult, hits: [RouteHit]) -> Date? {
+        guard vehicle == .auto, !hits.contains(where: { $0.zone == .areaC }), let main = result.options.first else { return nil }
+        let crossing = RouteAnalyzer.hits(
+            route: main.coordinates,
+            travelTime: main.travelTime,
+            departure: result.departure,
+            zones: ZoneData.zones.filter { $0.zone == .areaC },
+            rules: ZoneRules(ignoreSchedule: true)
+        ).first
+        guard let crossing else { return nil }
+        return ZoneSchedule.nextAreaActivation(after: crossing.passTime)
     }
 
     private func nameSwitchPoint(_ point: Coordinate?) {

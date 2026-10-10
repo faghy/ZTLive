@@ -96,6 +96,14 @@ final class ZoneScheduleTests: XCTestCase {
         XCTAssertFalse(ZoneSchedule.isAreaActive(at: date("2026-10-12T07:29:00+02:00")))
         XCTAssertFalse(ZoneSchedule.isAreaActive(at: date("2026-10-10T10:00:00+02:00")))
     }
+
+    func testNextAreaActivation() {
+        // Sabato sera → lunedì; prima delle 7:30 di un feriale → stesso giorno; 7 e 8 dicembre festivi.
+        XCTAssertEqual(ZoneSchedule.nextAreaActivation(after: date("2026-10-10T20:00:00+02:00")), date("2026-10-12T07:30:00+02:00"))
+        XCTAssertEqual(ZoneSchedule.nextAreaActivation(after: date("2026-10-13T06:00:00+02:00")), date("2026-10-13T07:30:00+02:00"))
+        XCTAssertEqual(ZoneSchedule.nextAreaActivation(after: date("2026-10-13T08:00:00+02:00")), date("2026-10-14T07:30:00+02:00"))
+        XCTAssertEqual(ZoneSchedule.nextAreaActivation(after: date("2026-12-06T20:00:00+01:00")), date("2026-12-09T07:30:00+01:00"))
+    }
 }
 
 final class LocalZoneTests: XCTestCase {

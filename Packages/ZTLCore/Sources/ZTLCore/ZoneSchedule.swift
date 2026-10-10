@@ -14,6 +14,19 @@ public enum ZoneSchedule {
         return isWithin([window], at: date)
     }
 
+    /// Prossima attivazione di Area B e C dopo `date`: le 7:30 del primo feriale non festivo.
+    public static func nextAreaActivation(after date: Date) -> Date? {
+        let start = milan.startOfDay(for: date)
+        for offset in 0..<15 {
+            guard let day = milan.date(byAdding: .day, value: offset, to: start),
+                  let opening = milan.date(bySettingHour: 7, minute: 30, second: 0, of: day) else { continue }
+            if opening > date, isAreaActive(at: opening) {
+                return opening
+            }
+        }
+        return nil
+    }
+
     public static func isWithin(_ windows: [WeeklyWindow], at date: Date) -> Bool {
         let components = milan.dateComponents([.weekday, .hour, .minute], from: date)
         guard let weekday = components.weekday, let hour = components.hour, let minute = components.minute else {
