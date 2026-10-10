@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/logo.png" width="128" alt="Logo ZTLive"></p>
+
 # ZTLive
 
 [English](README.md) · **Italiano**
@@ -5,6 +7,9 @@
 App iOS che avvisa quando ti avvicini a un varco ZTL di Milano (Area C, Area B, ZTL locali) mentre navighi con Google Maps, in auto o in moto.
 
 Gli avvisi arrivano come **Live Activity**, visibile su CarPlay, schermata di blocco e Dynamic Island, e opzionalmente a voce.
+
+<p align="center"><img src="docs/demo.gif" width="640" alt="Demo di ZTLive"></p>
+<p align="center"><sub>Animazione dimostrativa: avvicinandosi a un varco di Area C l'avviso diventa arancione e poi rosso; svoltando prima del varco torna via libera.</sub></p>
 
 ## Funzioni
 
@@ -27,6 +32,7 @@ Verificato su iPhone 15 Pro Max con iOS 27.0.1: aggiornamento in background con 
 | `Widget` | Estensione con la grafica della Live Activity |
 | `Shared` | Modello dati condiviso tra app ed estensione |
 | `Resources` | Varchi (GeoJSON del Comune) e zone locali (`zone_locali.json`) |
+| `tools/make_artwork.py` | Rigenera icona, logo e GIF dimostrativa |
 | `tools/build_zone_data.py` | Rigenera `zone_locali.json` dal dataset ds51, con orari ed esclusioni |
 | `project.yml` | Definizione del progetto per XcodeGen |
 

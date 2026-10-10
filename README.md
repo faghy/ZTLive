@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/logo.png" width="128" alt="ZTLive logo"></p>
+
 # ZTLive
 
 **English** · [Italiano](README.it.md)
@@ -5,6 +7,9 @@
 iOS app that warns you when you are approaching a Milan restricted traffic zone gate (Area C, Area B, local ZTLs) while navigating with Google Maps, by car or by motorcycle.
 
 Alerts are shown as a **Live Activity**, visible on CarPlay, the Lock Screen and the Dynamic Island, with optional voice announcements.
+
+<p align="center"><img src="docs/demo.gif" width="640" alt="ZTLive demo"></p>
+<p align="center"><sub>Illustrative animation: approaching an Area C gate, the alert turns orange and then red; turning away before the gate clears it.</sub></p>
 
 ## Features
 
@@ -28,6 +33,7 @@ Tested on an iPhone 15 Pro Max running iOS 27.0.1: background updates with Googl
 | `Shared` | Data model shared by the app and the extension |
 | `Resources` | Gates (City of Milan GeoJSON) and local zones (`zone_locali.json`) |
 | `tools/build_zone_data.py` | Regenerates `zone_locali.json` from dataset ds51, with schedules and exclusions |
+| `tools/make_artwork.py` | Regenerates the app icon, logo and demo GIF |
 | `project.yml` | Project definition for XcodeGen |
 
 ## Build
