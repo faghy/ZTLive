@@ -6,6 +6,8 @@ import ZTLCore
 struct RouteAnalysis {
     let result: RouteCheckResult
     let hits: [[RouteHit]]
+    /// Zona in cui si trova la destinazione, se il percorso in auto si ferma prima di entrarci.
+    var destinationZone: LocalZone?
     /// Se il percorso principale passa dall'Area C quando non è attiva: quando riapre.
     var areaCReopens: Date?
 
@@ -26,16 +28,27 @@ struct RouteAnalysis {
 
     /// Dove lasciare l'auto: poco prima della prima zona del percorso principale.
     /// `nil` se il percorso parte già dentro la zona.
+    /// Con la destinazione in una zona, il cambio è alla fine del percorso in auto.
     private var switchSample: (point: Coordinate, distanceAlong: Double)? {
-        guard let hit = mainHits.first, let main = result.options.first else { return nil }
-        return RouteAnalyzer.switchPoint(route: main.coordinates, before: hit)
+        guard let main = result.options.first else { return nil }
+        if let hit = mainHits.first {
+            return RouteAnalyzer.switchPoint(route: main.coordinates, before: hit)
+        }
+        guard destinationZone != nil, let end = main.coordinates.last else { return nil }
+        return (end, main.distance)
     }
 
     var switchPoint: Coordinate? { switchSample?.point }
 
-    /// Metri del percorso in auto rimasti dopo il punto di cambio.
+    /// Serve un ultimo tratto senza auto.
+    var needsLastLeg: Bool { !mainHits.isEmpty || destinationZone != nil }
+
+    /// Metri rimasti dopo il punto di cambio.
     var lastLegDistance: Double {
         guard let main = result.options.first else { return 0 }
+        if mainHits.isEmpty {
+            return Geo.distance(main.coordinates.last ?? result.destination, result.target)
+        }
         return max(0, main.distance - (switchSample?.distanceAlong ?? 0))
     }
 
@@ -46,7 +59,7 @@ struct RouteAnalysis {
 
     /// Ultimo tratto con l'altro mezzo; senza punto di cambio parte dalla partenza.
     func lastLegLink(from point: Coordinate?, mode: TravelMode) -> URL {
-        GoogleMapsLink.directionsURL(origin: point ?? result.origin, destination: result.destination, mode: mode)
+        GoogleMapsLink.directionsURL(origin: point ?? result.origin, destination: result.target, mode: mode)
     }
 
     /// Minuti in più dell'alternativa rispetto al percorso principale.
@@ -128,8 +141,21 @@ final class RouteCheckModel: ObservableObject {
         }
         var analysis = RouteAnalysis(result: result, hits: hits)
         analysis.areaCReopens = inactiveAreaCReopening(result: result, hits: hits.first ?? [])
+        analysis.destinationZone = zoneAroundTarget(result: result, hits: hits.first ?? [], rules: rules)
         phase = .done(analysis)
         nameSwitchPoint(analysis.switchPoint)
+    }
+
+    /// Zona attiva all'arrivo che contiene la destinazione ma non è attraversata dal percorso in auto.
+    /// Prima ZTL e aree pedonali, poi Area B e C.
+    private func zoneAroundTarget(result: RouteCheckResult, hits: [RouteHit], rules: ZoneRules) -> LocalZone? {
+        guard let main = result.options.first else { return nil }
+        let arrival = result.departure.addingTimeInterval(main.travelTime)
+        let crossed = Set(hits.map(\.zoneID))
+        let candidates = ZoneData.zones.filter {
+            !crossed.contains($0.id) && rules.applies(to: $0, at: arrival) && $0.contains(result.target)
+        }
+        return candidates.first { !$0.zone.hasGates } ?? candidates.first
     }
 
     /// In auto, se il percorso entra nell'Area C ma non la conta perché spenta, quando riapre.

@@ -59,9 +59,21 @@ struct RouteCheckSections: View {
 
         Section {
             if analysis.mainHits.isEmpty {
-                Label("Nessuna ZTL lungo il percorso", systemImage: "checkmark.shield.fill")
+                Label(analysis.destinationZone == nil ? "Nessuna ZTL lungo il percorso" : "Nessuna ZTL lungo il percorso in auto", systemImage: "checkmark.shield.fill")
                     .foregroundStyle(.green)
                     .font(.headline)
+                if let zone = analysis.destinationZone {
+                    HStack(spacing: 12) {
+                        Image(systemName: "figure.walk")
+                            .foregroundStyle(.orange)
+                        VStack(alignment: .leading) {
+                            Text("La destinazione è in \(zone.zone.label)").font(.headline)
+                            Text("\(zone.name): in auto arrivi a circa \(meters(analysis.lastLegDistance)), poi prosegui senza auto.")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
             } else {
                 ForEach(analysis.mainHits, id: \.zoneID) { hit in
                     HStack(spacing: 12) {
@@ -110,7 +122,7 @@ struct RouteCheckSections: View {
             }
         }
 
-        if !analysis.mainHits.isEmpty {
+        if analysis.needsLastLeg {
             lastLeg(analysis)
         }
 
@@ -142,7 +154,7 @@ struct RouteCheckSections: View {
             if let switchPoint {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("1. In auto fino a \(model.switchPointName ?? "poco prima della ZTL")")
-                    Text("Stesso percorso, ti fermi prima di entrare.")
+                    Text(analysis.mainHits.isEmpty ? "Fine del percorso in auto, al bordo della zona." : "Stesso percorso, ti fermi prima di entrare.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -155,7 +167,7 @@ struct RouteCheckSections: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("\(switchPoint == nil ? "" : "2. ")\(model.lastLegMode.label) fino a \(analysis.result.destinationLabel)")
-                Text("Circa \(kilometers(analysis.lastLegDistance)) rimasti")
+                Text("Circa \(meters(analysis.lastLegDistance)) rimasti")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -165,7 +177,7 @@ struct RouteCheckSections: View {
                 Label("Apri in Google Maps", systemImage: model.lastLegMode.symbol)
             }
         } header: {
-            Text(switchPoint == nil ? "Prosegui senza auto" : "Lascia l'auto prima della ZTL")
+            Text(switchPoint == nil ? "Prosegui senza auto" : analysis.mainHits.isEmpty ? "Ultimo tratto senza auto" : "Lascia l'auto prima della ZTL")
         } footer: {
             if switchPoint != nil {
                 Text("Google Maps non accetta due mezzi nello stesso link: apri il primo tratto e, arrivato, torna qui per il secondo.")
@@ -185,6 +197,11 @@ struct RouteCheckSections: View {
             day = date.formatted(Date.FormatStyle().weekday(.wide).locale(Locale(identifier: "it_IT")))
         }
         return "\(day) alle \(date.formatted(Date.FormatStyle().hour(.defaultDigits(amPM: .omitted)).minute().locale(Locale(identifier: "it_IT"))))"
+    }
+
+    /// Sotto il chilometro in metri arrotondati, sopra in chilometri.
+    private func meters(_ value: Double) -> String {
+        value < 1000 ? "\(Int((value / 10).rounded()) * 10) m" : kilometers(value)
     }
 
     private func kilometers(_ meters: Double) -> String {

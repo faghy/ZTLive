@@ -14,7 +14,10 @@ struct RouteCheckResult {
     let destinationLabel: String
     /// `nil` = posizione attuale.
     let origin: Coordinate?
+    /// Fine del percorso in auto: la strada più vicina alla destinazione.
     let destination: Coordinate
+    /// Il luogo cercato, che può essere in un'area pedonale dove l'auto non arriva.
+    let target: Coordinate
     /// Il primo è il percorso consigliato da Apple Maps, gli altri le alternative.
     let options: [RouteOption]
     let departure: Date
@@ -72,12 +75,15 @@ enum RouteChecker {
             throw RouteCheckError.noRoute("nessun percorso restituito")
         }
         log("Percorsi calcolati: \(options.count)")
+        let target = Coordinate(latitude: last.placemark.coordinate.latitude, longitude: last.placemark.coordinate.longitude)
+        log("Fine del percorso in auto: \(String(format: "%.5f, %.5f", end.latitude, end.longitude)) (\(Int(Geo.distance(end, target))) m dalla destinazione)")
         let startsHere = route.points.first == .currentLocation
         return RouteCheckResult(
             originLabel: startsHere ? "Posizione attuale" : label(for: first, point: route.points[0]),
             destinationLabel: label(for: last, point: route.points[route.points.count - 1]),
             origin: startsHere ? nil : start,
             destination: end,
+            target: target,
             options: options,
             departure: Date()
         )
