@@ -35,6 +35,16 @@ struct RouteCheckSections: View {
         case .done(let analysis):
             results(analysis)
         }
+
+        if !model.details.isEmpty {
+            Section {
+                DisclosureGroup("Dettagli") {
+                    Text(model.details.joined(separator: "\n"))
+                        .font(.caption.monospaced())
+                        .textSelection(.enabled)
+                }
+            }
+        }
     }
 
     @ViewBuilder

@@ -40,6 +40,8 @@ final class RouteCheckModel: ObservableObject {
     @Published private(set) var phase: Phase = .idle
     /// Messaggio informativo mostrato sotto il risultato.
     @Published var notice: String?
+    /// Passaggi del controllo, per capire cosa non va.
+    @Published private(set) var details: [String] = []
     @Published var vehicle: Vehicle {
         didSet {
             defaults.set(vehicle.rawValue, forKey: "routeVehicle")
@@ -58,10 +60,13 @@ final class RouteCheckModel: ObservableObject {
     func check(_ text: String) {
         task?.cancel()
         result = nil
+        details = []
         phase = .loading
         task = Task {
             do {
-                let result = try await RouteChecker.check(text: text)
+                let result = try await RouteChecker.check(text: text) { [weak self] line in
+                    Task { @MainActor in self?.details.append(line) }
+                }
                 guard !Task.isCancelled else { return }
                 self.result = result
                 reanalyze()

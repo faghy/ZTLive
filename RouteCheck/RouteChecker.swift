@@ -25,7 +25,7 @@ enum RouteCheckError: LocalizedError {
     case unsupportedLink
     case notDriving
     case placeNotFound(String)
-    case noRoute
+    case noRoute(String)
 
     var errorDescription: String? {
         switch self {
@@ -33,28 +33,41 @@ enum RouteCheckError: LocalizedError {
         case .unsupportedLink: return "Questo link di Google Maps non contiene un percorso che riesco a leggere."
         case .notDriving: return "Il percorso condiviso non è in auto: imposta il percorso in auto o in moto e condividilo di nuovo."
         case .placeNotFound(let name): return "Non trovo \"\(name)\" sulla mappa."
-        case .noRoute: return "Apple Maps non ha trovato un percorso tra questi punti."
+        case .noRoute(let detail): return "Apple Maps non ha trovato un percorso tra questi punti (\(detail))."
         }
     }
 }
 
 /// Dal link condiviso da Google Maps ai percorsi in auto calcolati con Apple Maps.
 enum RouteChecker {
-    static func check(text: String) async throws -> RouteCheckResult {
+    /// `log` riceve i passaggi intermedi, mostrati nei dettagli per capire cosa non va.
+    static func check(text: String, log: @escaping (String) -> Void = { _ in }) async throws -> RouteCheckResult {
         guard let link = GoogleMapsLink.firstURL(in: text) else { throw RouteCheckError.noLink }
-        guard let route = GoogleMapsLink.parse(try await resolve(link)) else { throw RouteCheckError.unsupportedLink }
+        log("Link: \(link.absoluteString)")
+        let resolved = try await resolve(link)
+        if resolved != link {
+            log("Link completo: \(resolved.absoluteString)")
+        }
+        guard let route = GoogleMapsLink.parse(resolved) else { throw RouteCheckError.unsupportedLink }
+        log("Punti: \(route.points.map(describe).joined(separator: " → "))")
         guard route.isDriving else { throw RouteCheckError.notDriving }
 
         var items: [MKMapItem] = []
         for point in route.points {
-            items.append(try await mapItem(for: point))
+            let item = try await mapItem(for: point)
+            if !item.isCurrentLocation {
+                let coordinate = item.placemark.coordinate
+                log("Trovato: \(item.name ?? "?") (\(String(format: "%.5f, %.5f", coordinate.latitude, coordinate.longitude)))")
+            }
+            items.append(item)
         }
         guard let first = items.first, let last = items.last, items.count >= 2 else { throw RouteCheckError.unsupportedLink }
 
         let options = try await directions(through: items)
         guard let main = options.first, let start = main.coordinates.first, let end = main.coordinates.last else {
-            throw RouteCheckError.noRoute
+            throw RouteCheckError.noRoute("nessun percorso restituito")
         }
+        log("Percorsi calcolati: \(options.count)")
         let startsHere = route.points.first == .currentLocation
         return RouteCheckResult(
             originLabel: startsHere ? "Posizione attuale" : label(for: first, point: route.points[0]),
@@ -113,7 +126,9 @@ enum RouteChecker {
         var travelTime: TimeInterval = 0
         var distance: CLLocationDistance = 0
         for (from, to) in zip(items, items.dropFirst()) {
-            guard let leg = try await calculate(from: from, to: to, alternatives: false).first else { throw RouteCheckError.noRoute }
+            guard let leg = try await calculate(from: from, to: to, alternatives: false).first else {
+                throw RouteCheckError.noRoute("tratta vuota")
+            }
             coordinates += leg.polyline.coordinates
             travelTime += leg.expectedTravelTime
             distance += leg.distance
@@ -130,7 +145,15 @@ enum RouteChecker {
         do {
             return try await MKDirections(request: request).calculate().routes
         } catch {
-            throw RouteCheckError.noRoute
+            throw RouteCheckError.noRoute(error.localizedDescription)
+        }
+    }
+
+    private static func describe(_ point: RoutePoint) -> String {
+        switch point {
+        case .currentLocation: return "posizione attuale"
+        case .coordinate(let c): return String(format: "%.5f, %.5f", c.latitude, c.longitude)
+        case .query(let text): return "\"\(text)\""
         }
     }
 

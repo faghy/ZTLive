@@ -4,26 +4,30 @@ import SwiftUI
 struct RouteScreen: View {
     @StateObject private var model = RouteCheckModel()
     @State private var link = ""
+    @FocusState private var linkFocused: Bool
     @Environment(\.openURL) private var openURL
 
     var body: some View {
         NavigationStack {
             List {
                 Section {
-                    TextField("Link di Google Maps", text: $link, axis: .vertical)
-                        .lineLimit(1...3)
+                    TextField("Link di Google Maps", text: $link)
+                        .focused($linkFocused)
+                        .keyboardType(.URL)
+                        .submitLabel(.go)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
+                        .onSubmit(check)
                     HStack {
                         PasteButton(payloadType: String.self) { strings in
                             Task { @MainActor in
                                 link = strings.first ?? ""
-                                model.check(link)
+                                check()
                             }
                         }
                         .labelStyle(.titleAndIcon)
                         Spacer()
-                        Button("Controlla") { model.check(link) }
+                        Button("Controlla", action: check)
                             .disabled(link.isEmpty)
                     }
                     .buttonStyle(.borderless)
@@ -40,6 +44,19 @@ struct RouteScreen: View {
                 }
             }
             .navigationTitle("Percorso")
+            .scrollDismissesKeyboard(.immediately)
+            .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Fine") { linkFocused = false }
+                }
+            }
         }
+    }
+
+    private func check() {
+        linkFocused = false
+        guard !link.isEmpty else { return }
+        model.check(link)
     }
 }
