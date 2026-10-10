@@ -28,6 +28,7 @@ struct ContentView: View {
                     LabeledContent("Varchi e zone", value: "\(model.gatesCount) varchi · \(model.zonesCount) zone")
                     LabeledContent("Posizione", value: authorizationText)
                     LabeledContent("Live Activity", value: model.liveActivitiesEnabled ? "Abilitate" : "Disabilitate")
+                    LabeledContent("Versione", value: appVersion)
                 }
 
                 Section {
@@ -68,6 +69,13 @@ struct ContentView: View {
             }
             .navigationTitle("ZTLive")
         }
+    }
+
+    private var appVersion: String {
+        let info = Bundle.main.infoDictionary
+        let version = info?["CFBundleShortVersionString"] as? String ?? "?"
+        let build = info?["CFBundleVersion"] as? String ?? "?"
+        return "\(version) (\(build))"
     }
 
     private var modeText: String {

@@ -37,6 +37,8 @@ targets:
       path: Generated/App-Info.plist
       properties:
         CFBundleDisplayName: ZTLive
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         UILaunchScreen: {}
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
@@ -65,6 +67,8 @@ targets:
       path: Generated/Widget-Info.plist
       properties:
         CFBundleDisplayName: ZTLive
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
 
@@ -85,6 +89,8 @@ targets:
       path: Generated/Share-Info.plist
       properties:
         CFBundleDisplayName: ZTLive
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         NSLocationWhenInUseUsageDescription: ZTLive usa la posizione per controllare i percorsi che partono da dove ti trovi.
         NSExtension:
           NSExtensionPointIdentifier: com.apple.share-services
