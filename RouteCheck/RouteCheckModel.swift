@@ -1,5 +1,6 @@
 import CoreLocation
 import Foundation
+import os
 import ZTLCore
 
 /// Esito del controllo: zone attraversate da ciascun percorso.
@@ -114,21 +115,32 @@ final class RouteCheckModel: ObservableObject {
         task = Task {
             do {
                 let result = try await RouteChecker.check(text: text) { [weak self] line in
-                    Task { @MainActor in self?.details.append(line) }
+                    Task { @MainActor in self?.log(line) }
                 }
                 guard !Task.isCancelled else { return }
                 self.result = result
                 reanalyze()
             } catch {
                 guard !Task.isCancelled else { return }
+                log("Errore: \(error.localizedDescription)")
                 phase = .failed(error.localizedDescription)
             }
         }
     }
 
+    /// Riga dei dettagli, scritta anche nel log di sistema per leggerla dal PC con il telefono collegato.
+    private func log(_ line: String) {
+        details.append(line)
+        Self.logger.notice("\(line, privacy: .public)")
+    }
+
+    private static let logger = Logger(subsystem: "com.faghy.ztlive", category: "percorso")
+
     private func reanalyze() {
         guard let result else { return }
         let rules = ZoneRules(isMotorcycle: vehicle == .moto, includeAreaB: defaults.bool(forKey: "includeAreaB"))
+        let around = ZoneData.zones.filter { $0.contains(result.target) }.map(\.name)
+        log("Zone caricate: \(ZoneData.zones.count) · veicolo: \(vehicle.label) · destinazione in: \(around.isEmpty ? "nessuna zona" : around.joined(separator: ", "))")
         let hits = result.options.map { option in
             RouteAnalyzer.hits(
                 route: option.coordinates,
@@ -140,6 +152,7 @@ final class RouteCheckModel: ObservableObject {
             )
         }
         var analysis = RouteAnalysis(result: result, hits: hits)
+        log("Zone sul percorso: \(hits.first.map { $0.isEmpty ? "nessuna" : $0.map(\.name).joined(separator: ", ") } ?? "-")")
         analysis.areaCReopens = inactiveAreaCReopening(result: result, hits: hits.first ?? [])
         analysis.destinationZone = zoneAroundTarget(result: result, hits: hits.first ?? [], rules: rules)
         phase = .done(analysis)
