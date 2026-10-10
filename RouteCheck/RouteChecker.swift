@@ -26,6 +26,7 @@ enum RouteCheckError: LocalizedError {
     case notDriving
     case placeNotFound(String)
     case noRoute(String)
+    case noLocation(String)
 
     var errorDescription: String? {
         switch self {
@@ -34,6 +35,7 @@ enum RouteCheckError: LocalizedError {
         case .notDriving: return "Il percorso condiviso non è in auto: imposta il percorso in auto o in moto e condividilo di nuovo."
         case .placeNotFound(let name): return "Non trovo \"\(name)\" sulla mappa."
         case .noRoute(let detail): return "Apple Maps non ha trovato un percorso tra questi punti (\(detail))."
+        case .noLocation(let detail): return "Non riesco a leggere la tua posizione (\(detail)). Controlla che ZTLive possa usare la posizione nelle Impostazioni."
         }
     }
 }
@@ -55,9 +57,11 @@ enum RouteChecker {
         var items: [MKMapItem] = []
         for point in route.points {
             let item = try await mapItem(for: point)
-            if !item.isCurrentLocation {
-                let coordinate = item.placemark.coordinate
-                log("Trovato: \(item.name ?? "?") (\(String(format: "%.5f, %.5f", coordinate.latitude, coordinate.longitude)))")
+            let coordinate = String(format: "%.5f, %.5f", item.placemark.coordinate.latitude, item.placemark.coordinate.longitude)
+            if point == .currentLocation {
+                log("Posizione attuale: \(coordinate)")
+            } else {
+                log("Trovato: \(item.name ?? "?") (\(coordinate))")
             }
             items.append(item)
         }
@@ -95,7 +99,8 @@ enum RouteChecker {
     private static func mapItem(for point: RoutePoint) async throws -> MKMapItem {
         switch point {
         case .currentLocation:
-            return MKMapItem.forCurrentLocation()
+            let location = try await CurrentLocation.fetch()
+            return MKMapItem(placemark: MKPlacemark(coordinate: location.coordinate))
         case .coordinate(let coordinate):
             return MKMapItem(placemark: MKPlacemark(coordinate: coordinate.clLocation))
         case .query(let text):
