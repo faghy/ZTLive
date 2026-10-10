@@ -114,7 +114,7 @@ struct RouteCheckSections: View {
 
 /// Apre il link nell'app Google Maps, o nel browser se l'app non c'è.
 enum GoogleMapsOpener {
-    static func open(_ url: URL, using openURL: (URL, @escaping (Bool) -> Void) -> Void) {
+    static func open(_ url: URL, using openURL: @escaping (URL, @escaping (Bool) -> Void) -> Void) {
         guard let appURL = GoogleMapsLink.appURL(for: url) else {
             openURL(url) { _ in }
             return
