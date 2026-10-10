@@ -36,7 +36,7 @@ Verificato su iPhone 15 Pro Max con iOS 27.0.1: aggiornamento in background con 
 | `Shared` | Modello dati condiviso tra app ed estensione |
 | `Resources` | Varchi (GeoJSON del Comune) e zone locali (`zone_locali.json`) |
 | `tools/make_artwork.py` | Rigenera icona, logo e GIF dimostrativa |
-| `tools/build_zone_data.py` | Rigenera `zone_locali.json` dal dataset ds51, con orari ed esclusioni |
+| `tools/build_zone_data.py` | Scarica i varchi e rigenera `zone_locali.json` dal dataset ds51, con orari ed esclusioni |
 | `project.yml` | Definizione del progetto per XcodeGen |
 
 ## Build
@@ -65,6 +65,6 @@ Fonte: [Portale Open Data del Comune di Milano](https://dati.comune.milano.it), 
 - [Varchi Area B](https://dati.comune.milano.it/dataset/ds959-varchi-areab) (ds959)
 - [Aree pedonali e ZTL](https://dati.comune.milano.it/dataset/ds51_trafficotrasporti_aree_pedonali_ztl) (ds51)
 
-Per aggiornare le zone locali: `python3 tools/build_zone_data.py`.
+Per aggiornare i dati a mano: `python3 tools/build_zone_data.py`. GitHub Actions lo esegue ogni lunedì (`update-data.yml`) e salva i file se sono cambiati; l'app li scarica all'avvio (al massimo ogni 6 ore, o trascinando in basso la schermata Avvisi) e senza connessione usa quelli inclusi.
 
 Le informazioni hanno valore indicativo: fanno fede la segnaletica e gli atti ufficiali del Comune.

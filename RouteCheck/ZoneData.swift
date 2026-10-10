@@ -9,29 +9,41 @@ enum Vehicle: String, CaseIterable, Identifiable {
     var label: String { self == .auto ? "Auto" : "Moto" }
 }
 
-/// Varchi e zone inclusi nell'app, caricati una sola volta.
+/// Varchi e zone in uso: quelli scaricati da ZoneDataUpdater se ci sono, altrimenti quelli inclusi nell'app.
+@MainActor
 enum ZoneData {
-    static let gates: [Gate] = {
-        let files: [(String, Zone)] = [("areac_varchi", .areaC), ("areab_varchi", .areaB)]
-        return files.flatMap { name, zone -> [Gate] in
-            guard let data = resource(name, "geojson"),
-                  let gates = try? GateLoader.load(geoJSON: data, zone: zone) else { return [] }
-            return gates
-        }
-    }()
-
+    private(set) static var gates: [Gate] = loadGates()
     /// ZTL, aree pedonali e perimetri di Area B e C.
-    static let zones: [LocalZone] = {
-        guard let data = resource("zone_locali", "json"),
-              let zones = try? LocalZoneLoader.load(json: data) else { return [] }
-        return zones
-    }()
+    private(set) static var zones: [LocalZone] = loadZones()
 
-    private static func resource(_ name: String, _ ext: String) -> Data? {
-        guard let url = Bundle.main.url(forResource: name, withExtension: ext) else {
-            print("Risorsa \(name).\(ext) mancante")
-            return nil
+    /// Rilegge i file dopo un aggiornamento.
+    static func reload() {
+        gates = loadGates()
+        zones = loadZones()
+    }
+
+    static let gateFiles: [(name: String, zone: Zone)] = [("areac_varchi.geojson", .areaC), ("areab_varchi.geojson", .areaB)]
+    static let zonesFile = "zone_locali.json"
+
+    private static func loadGates() -> [Gate] {
+        gateFiles.flatMap { file -> [Gate] in
+            data(file.name, parse: { try GateLoader.load(geoJSON: $0, zone: file.zone) }) ?? []
         }
-        return try? Data(contentsOf: url)
+    }
+
+    private static func loadZones() -> [LocalZone] {
+        data(zonesFile, parse: LocalZoneLoader.load(json:)) ?? []
+    }
+
+    /// Prova prima il file scaricato e, se manca o non si legge, quello incluso nell'app.
+    private static func data<T>(_ file: String, parse: (Data) throws -> [T]) -> [T]? {
+        let bundled = Bundle.main.url(forResource: file, withExtension: nil)
+        for url in [ZoneDataUpdater.cachedURL(for: file), bundled].compactMap({ $0 }) {
+            if let data = try? Data(contentsOf: url), let items = try? parse(data), !items.isEmpty {
+                return items
+            }
+        }
+        print("Dati \(file) mancanti")
+        return nil
     }
 }

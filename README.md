@@ -35,7 +35,7 @@ Tested on an iPhone 15 Pro Max running iOS 27.0.1: background updates with Googl
 | `ShareExtension` | "Share → ZTLive" extension that receives routes from Google Maps |
 | `Shared` | Data model shared by the app and the extension |
 | `Resources` | Gates (City of Milan GeoJSON) and local zones (`zone_locali.json`) |
-| `tools/build_zone_data.py` | Regenerates `zone_locali.json` from dataset ds51, with schedules and exclusions |
+| `tools/build_zone_data.py` | Downloads the gates and regenerates `zone_locali.json` from dataset ds51, with schedules and exclusions |
 | `tools/make_artwork.py` | Regenerates the app icon, logo and demo GIF |
 | `project.yml` | Project definition for XcodeGen |
 
@@ -65,6 +65,6 @@ Source: [City of Milan Open Data portal](https://dati.comune.milano.it), CC BY 4
 - [Area B gates](https://dati.comune.milano.it/dataset/ds959-varchi-areab) (ds959)
 - [Pedestrian areas and ZTLs](https://dati.comune.milano.it/dataset/ds51_trafficotrasporti_aree_pedonali_ztl) (ds51)
 
-To refresh the local zones: `python3 tools/build_zone_data.py`.
+To refresh the data by hand: `python3 tools/build_zone_data.py`. GitHub Actions runs it every Monday (`update-data.yml`) and commits the files when they change; the app downloads them on launch (at most every 6 hours, or by pulling down the Alerts screen) and falls back to the bundled copy when offline.
 
 This information is indicative only: road signs and the City's official acts always prevail.

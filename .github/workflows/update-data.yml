@@ -1,0 +1,34 @@
+name: Aggiorna dati del Comune
+
+# Ogni lunedì scarica varchi e zone dal portale open data del Comune di Milano.
+# Se sono cambiati li salva nel repository: l'app li scarica da qui senza essere reinstallata.
+on:
+  schedule:
+    - cron: "0 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    name: Scarica e rigenera i dati
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rigenera i file
+        run: python3 tools/build_zone_data.py
+
+      - name: Salva le modifiche
+        run: |
+          if git diff --quiet -- Resources; then
+            echo "Nessuna modifica nei dati del Comune."
+            exit 0
+          fi
+          git diff --stat -- Resources
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Resources
+          git commit -m "Dati del Comune aggiornati"
+          git push

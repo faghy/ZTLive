@@ -9,6 +9,8 @@ final class ShareViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        // L'estensione ha dati propri, separati da quelli dell'app: li aggiorna per le prossime volte.
+        Task { await ZoneDataUpdater.updateIfNeeded() }
         let root = ShareRootView(
             model: model,
             open: { [weak self] url in self?.openInGoogleMaps(url) },

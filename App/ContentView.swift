@@ -26,6 +26,7 @@ struct ContentView: View {
                     }
                     LabeledContent("Aggiornamenti GPS", value: "\(model.gpsUpdates)")
                     LabeledContent("Varchi e zone", value: "\(model.gatesCount) varchi · \(model.zonesCount) zone")
+                    LabeledContent("Dati del Comune", value: dataText)
                     LabeledContent("Posizione", value: authorizationText)
                     LabeledContent("Live Activity", value: model.liveActivitiesEnabled ? "Abilitate" : "Disabilitate")
                     LabeledContent("Versione", value: appVersion)
@@ -67,8 +68,15 @@ struct ContentView: View {
                     Text("Simulazione: avvicinamento finto a un varco ogni 2 secondi. Avviala, apri Google Maps e collega CarPlay: la Live Activity deve continuare ad aggiornarsi. Il contatore GPS conferma che l'app lavora in background.")
                 }
             }
+            // Trascinando verso il basso si controllano subito i dati del Comune.
+            .refreshable { await model.updateData(force: true) }
             .navigationTitle("ZTLive")
         }
+    }
+
+    private var dataText: String {
+        guard let date = model.dataUpdatedAt else { return "Inclusi nell'app" }
+        return "Aggiornati il \(date.formatted(date: .numeric, time: .omitted))"
     }
 
     private var appVersion: String {

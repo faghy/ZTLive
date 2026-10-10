@@ -19,6 +19,8 @@ final class AppModel: ObservableObject {
     @Published private(set) var authorization: CLAuthorizationStatus = .notDetermined
     @Published private(set) var gatesCount = 0
     @Published private(set) var zonesCount = 0
+    /// Ultimo aggiornamento dei dati del Comune; `nil` = quelli inclusi nell'app.
+    @Published private(set) var dataUpdatedAt: Date?
     @Published private(set) var connectedDevice: VehicleDetector.Device?
     /// Il veicolo è stato scelto automaticamente dal dispositivo collegato.
     @Published private(set) var vehicleIsAutomatic = false
@@ -55,9 +57,9 @@ final class AppModel: ObservableObject {
     private let liveActivity = LiveActivityManager()
     private let speaker = Speaker()
     private let vehicleDetector = VehicleDetector()
-    private let gates = ZoneData.gates
+    private var gates: [Gate] { ZoneData.gates }
     /// Durante la guida Area B e C si controllano dai varchi, non dal perimetro.
-    private let localZones = ZoneData.zones.filter { !$0.zone.hasGates }
+    private var localZones: [LocalZone] { ZoneData.zones.filter { !$0.zone.hasGates } }
     private var announced: [String: State.Status] = [:]
     private var simulationTimer: Timer?
     private var simulatedDistance = 0.0
@@ -74,8 +76,7 @@ final class AppModel: ObservableObject {
         includeAreaB = defaults.bool(forKey: "includeAreaB")
         includeLocalZones = defaults.object(forKey: "includeLocalZones") as? Bool ?? true
         ignoreSchedule = defaults.object(forKey: "ignoreSchedule") as? Bool ?? false
-        gatesCount = gates.count
-        zonesCount = localZones.count
+        refreshDataInfo()
         authorization = location.authorizationStatus
 
         location.onUpdate = { [weak self] location in
@@ -122,6 +123,20 @@ final class AppModel: ObservableObject {
         announced = [:]
         state = .clear(vehicle: vehicle.label)
         mode = .off
+    }
+
+    // MARK: - Dati
+
+    /// Scarica varchi e zone aggiornati, se ce ne sono.
+    func updateData(force: Bool = false) async {
+        await ZoneDataUpdater.updateIfNeeded(force: force)
+        refreshDataInfo()
+    }
+
+    private func refreshDataInfo() {
+        gatesCount = gates.count
+        zonesCount = localZones.count
+        dataUpdatedAt = ZoneDataUpdater.lastUpdate
     }
 
     // MARK: - Veicolo

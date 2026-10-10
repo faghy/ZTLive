@@ -2,7 +2,9 @@
 """Genera Resources/zone_locali.json dal dataset ds51 (aree pedonali e ZTL) del Comune di Milano.
 
 Uso: python3 tools/build_zone_data.py [percorso/disciplina_aree.geojson]
-Senza argomenti scarica il dataset dal portale open data.
+Senza argomenti scarica il dataset dal portale open data, insieme ai varchi di Area C (ds82) e Area B (ds959).
+GitHub Actions lo esegue ogni settimana (.github/workflows/update-data.yml) e l'app scarica i file aggiornati.
+Se un dataset scaricato ha molti meno elementi di quello attuale, lo script si ferma senza toccare i file.
 
 Il dataset non ha un campo orari: quando le note li riportano li trascriviamo in SCHEDULES,
 altrimenti la zona è considerata sempre attiva (meglio un avviso in più che una multa).
@@ -17,7 +19,16 @@ SOURCE_URL = (
     "https://dati.comune.milano.it/dataset/d7d9179a-8228-427f-9c86-1e30154be4fe/resource/"
     "d788b26b-31b4-4e57-992d-276a1280c8c2/download/disciplina_aree.geojson"
 )
-OUTPUT = Path(__file__).resolve().parent.parent / "Resources" / "zone_locali.json"
+RESOURCES = Path(__file__).resolve().parent.parent / "Resources"
+OUTPUT = RESOURCES / "zone_locali.json"
+GATE_SOURCES = {
+    "areac_varchi.geojson": "https://dati.comune.milano.it/dataset/4cad1605-8225-4ecd-9b82-868b3af453e5/resource/"
+    "fa8fcc31-1722-4a50-a0ae-ce7b9c0d0361/download/ingressi_areac_varchi.geojson",
+    "areab_varchi.geojson": "https://dati.comune.milano.it/dataset/cebfe28e-a50e-4b81-9d14-7b0d37170f0d/resource/"
+    "c3439df3-673d-45e7-b151-c6d8d70ba0e4/download/areab_varchi.geojson",
+}
+# Sotto questa frazione degli elementi attuali il dataset è considerato rotto o incompleto.
+MIN_RATIO = 0.8
 
 KINDS = {"ZTL": "ztl", "AP": "pedestrian", "AREA_C": "areaC", "AREA_B": "areaB"}
 # Perimetri di Area B e C: servono a controllare i percorsi; durante la guida si usano i varchi.
@@ -78,12 +89,38 @@ def rings(geometry):
     return result
 
 
+def download(url):
+    with urllib.request.urlopen(url, timeout=60) as response:
+        return response.read()
+
+
+def check_count(path, new_count):
+    """Si ferma se il nuovo dataset ha molti meno elementi di quello attuale."""
+    if not path.exists():
+        return
+    current = json.loads(path.read_text())
+    old_count = len(current["features"] if isinstance(current, dict) else current)
+    if new_count < old_count * MIN_RATIO:
+        sys.exit(f"{path.name}: {new_count} elementi contro {old_count} attuali, file non aggiornato")
+
+
+def update_gates():
+    """I varchi si salvano così come li pubblica il Comune: l'app legge direttamente il GeoJSON."""
+    for name, url in GATE_SOURCES.items():
+        raw = download(url)
+        features = json.loads(raw)["features"]
+        path = RESOURCES / name
+        check_count(path, len(features))
+        path.write_bytes(raw)
+        print(f"{name}: {len(features)} varchi")
+
+
 def main():
     if len(sys.argv) > 1:
         data = json.loads(Path(sys.argv[1]).read_text())
     else:
-        with urllib.request.urlopen(SOURCE_URL, timeout=60) as response:
-            data = json.load(response)
+        data = json.loads(download(SOURCE_URL))
+        update_gates()
 
     zones = []
     for feature in data["features"]:
@@ -102,6 +139,7 @@ def main():
         })
 
     zones.sort(key=lambda zone: zone["id"])
+    check_count(OUTPUT, len(zones))
     OUTPUT.write_text(json.dumps(zones, ensure_ascii=False, separators=(",", ":")))
     counts = {kind: sum(zone["kind"] == kind for zone in zones) for kind in KINDS.values()}
     print(f"{OUTPUT.name}: {len(zones)} zone {counts}")
