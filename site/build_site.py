@@ -22,6 +22,9 @@ ROOT = HERE.parent
 STATE = HERE / "state.json"
 
 GITHUB = "https://github.com/faghy/ZTLive"
+# Matomo su server3, modalità anonima (senza cookie, nessun consenso): None finché il sito non esiste.
+MATOMO_URL = "https://analytics.dueclic.eu"
+MATOMO_SITE_ID = 57
 LINKS = {
     "varchi": "https://dati.comune.milano.it/web/portale-del-dato/w/mappa-dei-varchi-di-area-c-e-area-b-a-milano",
     "ds82": "https://dati.comune.milano.it/dataset/ds82_infogeo_varchi_elettronici_localizzazione_",
@@ -275,6 +278,15 @@ def main():
     for slug in ("seo", "privacy"):
         if not plugins[slug]["active"]:
             api.call("POST", f"/plugins/{slug}/activate")
+    if MATOMO_SITE_ID:
+        if "analytics" not in plugins:
+            api.call("POST", "/catalog/plugin/analytics/install")
+            plugins = {p["slug"]: p for p in api.call("GET", "/plugins")}
+        if not plugins["analytics"]["active"]:
+            api.call("POST", "/plugins/analytics/activate")
+        analytics = api.call("GET", "/ext/analytics/config")
+        analytics["matomo"] = {"enabled": True, "url": MATOMO_URL, "siteId": str(MATOMO_SITE_ID), "mode": "anonymous"}
+        api.call("PUT", "/ext/analytics/config", analytics)
     if plugins.get("hi-john", {}).get("active"):
         api.call("POST", "/plugins/hi-john/deactivate")
 
@@ -312,9 +324,9 @@ def main():
     # Privacy e cookie policy generate dal plugin.
     config = api.call("GET", "/ext/privacy/config")
     config["controller"] = {**(config.get("controller") or {}), "name": "Serafino Christian", "email": "fag@faghy.it"}
-    # Niente statistiche, marketing, moduli né contenuti esterni: il banner non serve.
+    # Niente marketing, moduli né contenuti esterni, e Matomo è anonimo: il banner non serve.
     config["banner"]["enabled"] = False
-    config["processing"].update(contactForms=False, accounts=False, newsletter=False, analytics="", embeds=False)
+    config["processing"].update(contactForms=False, accounts=False, newsletter=False, embeds=False)
     api.call("PUT", "/ext/privacy/config", config)
     for kind, slug in (("privacy", "privacy"), ("cookies", "cookie")):
         policy = api.call("GET", f"/ext/privacy/policy/{kind}?locale=it&site=ZTLive&origin={SITE}")
