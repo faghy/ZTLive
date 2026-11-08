@@ -35,6 +35,7 @@ Verificato su iPhone 15 Pro Max con iOS 27.0.1: aggiornamento in background con 
 | `ShareExtension` | Estensione "Condividi → ZTLive" che riceve i percorsi da Google Maps |
 | `Shared` | Modello dati condiviso tra app ed estensione |
 | `Resources` | Varchi (GeoJSON del Comune) e zone locali (`zone_locali.json`) |
+| `site/` | Sito [ztlive.it](https://ztlive.it): mappa interattiva delle ZTL (`tools/build_site_map.py`, da OpenStreetMap e dati del Comune) e pagine su Cleitext (`site/build_site.py`) |
 | `tools/make_artwork.py` | Rigenera icona, logo e GIF dimostrativa |
 | `tools/build_zone_data.py` | Scarica i varchi e rigenera `zone_locali.json` dal dataset ds51, con orari ed esclusioni |
 | `project.yml` | Definizione del progetto per XcodeGen |

@@ -1,0 +1,29 @@
+{
+  "media": {
+    "logo": {
+      "id": "01a1bb9f-66f3-7357-a0bc-fcc68e59519b",
+      "url": "/media/01a1bb87-c841-74cf-b12e-e00ceb72d68a/2026/11/logo.png"
+    },
+    "favicon": {
+      "id": "01a1bb9f-67cd-732a-9f61-be6efbe62df8",
+      "url": "/media/01a1bb87-c841-74cf-b12e-e00ceb72d68a/2026/11/appicon.png"
+    },
+    "carplay": {
+      "id": "01a1bb9f-68e2-70f8-a836-ef24500e8a72",
+      "url": "/media/01a1bb87-c841-74cf-b12e-e00ceb72d68a/2026/11/carplay.png"
+    },
+    "mappa": {
+      "id": "01a1bb9f-6b8a-74aa-b67c-68f73abce12b",
+      "url": "/media/01a1bb87-c841-74cf-b12e-e00ceb72d68a/2026/11/mappa.png"
+    }
+  },
+  "pages": {
+    "home": "01a1bba1-59db-761e-8687-3980b0ba5d20",
+    "privacy": "01a1bba1-5de5-75d3-a2fc-c1ced210fde9",
+    "cookies": "01a1bba1-602d-7398-980c-31cc0587d941"
+  },
+  "menus": {
+    "primary": "01a1bba1-630b-7724-b318-1c42fd37be3e",
+    "footer": "01a1bba1-6436-743a-b7d4-ddfcaa758a5d"
+  }
+}

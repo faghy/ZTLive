@@ -32,13 +32,11 @@ OSM_QUERY = """[out:json][timeout:120];
 out geom qt;"""
 
 # Area disegnata e proiezione equirettangolare: 1 unità ≈ 1,4 m.
-SOUTH, WEST, NORTH, EAST = 45.440, 9.150, 45.492, 9.232
+SOUTH, WEST, NORTH, EAST = 45.444, 9.156, 45.489, 9.224
 LAT0 = math.radians((SOUTH + NORTH) / 2)
-SCALE = 4400 / ((EAST - WEST) * math.cos(LAT0))
+SCALE = 3650 / ((EAST - WEST) * math.cos(LAT0))
 WIDTH = round((EAST - WEST) * math.cos(LAT0) * SCALE)
 HEIGHT = round((NORTH - SOUTH) * SCALE)
-# Vista iniziale: Area C intera.
-START_VIEW = (700, 800, 2650, 2380)
 
 ROAD_CLASSES = {
     "residential": "r", "unclassified": "r", "living_street": "r",
@@ -65,8 +63,6 @@ LANDMARKS = [
     ("Porta Ticinese", 45.4556, 9.1811, ""),
     ("Sant'Ambrogio", 45.4624, 9.1754, ""),
     ("Cadorna", 45.4683, 9.1757, ""),
-    ("Città Studi", 45.4775, 9.2255, ""),
-    ("CityLife", 45.4775, 9.1560, ""),
 ]
 
 
@@ -113,7 +109,33 @@ def path(points, closed=False, tolerance=1.5):
     return "".join(out) + ("z" if closed else "")
 
 
+def near_area_c(points, area_c, margin=260):
+    """Vero se il tratto è dentro l'Area C o entro `margin` unità (circa 400 m) dal suo perimetro."""
+    x, y = points[len(points) // 2]
+    if not (area_c["box"][0] - margin < x < area_c["box"][2] + margin and area_c["box"][1] - margin < y < area_c["box"][3] + margin):
+        return False
+    if inside(x, y, area_c["ring"]):
+        return True
+    return any((x - vx) ** 2 + (y - vy) ** 2 < margin * margin for vx, vy in area_c["ring"])
+
+
+def inside(x, y, ring):
+    result = False
+    for (x1, y1), (x2, y2) in zip(ring, ring[1:] + ring[:1]):
+        if (y1 > y) != (y2 > y) and x < (x2 - x1) * (y - y1) / (y2 - y1) + x1:
+            result = not result
+    return result
+
+
+def area_c_outline():
+    zone = next(z for z in json.loads((RESOURCES / "zone_locali.json").read_text()) if z["kind"] == "areaC")
+    ring = [project(lat, lon) for lat, lon in max(zone["rings"], key=len)]
+    xs, ys = [p[0] for p in ring], [p[1] for p in ring]
+    return {"ring": ring, "box": (min(xs), min(ys), max(xs), max(ys))}
+
+
 def osm_layers(data):
+    area_c = area_c_outline()
     roads = {key: [] for key in set(ROAD_CLASSES.values())}
     water_lines, water_areas, parks, rail = [], [], [], []
     for element in data["elements"]:
@@ -121,14 +143,17 @@ def osm_layers(data):
         if element["type"] == "way" and "geometry" in element:
             points = [project(p["lat"], p["lon"]) for p in element["geometry"]]
             kind = ROAD_CLASSES.get(tags.get("highway"))
+            # Le strade residenziali solo attorno all'Area C: più lontano bastano le principali.
+            if kind == "r" and not near_area_c(points, area_c):
+                continue
             if kind and tags.get("area") != "yes":
-                roads[kind].append(path(points))
+                roads[kind].append(path(points, tolerance=2.5 if kind in "rw" else 1.8))
             elif tags.get("waterway"):
                 water_lines.append(path(points))
             elif tags.get("natural") == "water":
                 water_areas.append(path(points, closed=True))
             elif tags.get("leisure") == "park":
-                parks.append(path(points, closed=True))
+                parks.append(path(points, closed=True, tolerance=2.5))
             elif tags.get("railway") == "rail" and not tags.get("tunnel") and tags.get("service") is None:
                 rail.append(path(points))
         elif element["type"] == "relation" and tags.get("leisure") == "park":
@@ -143,7 +168,8 @@ def zone_layers():
     zones = json.loads((RESOURCES / "zone_locali.json").read_text())
     groups = {"areaB": [], "areaC": [], "ztl": [], "pedestrian": []}
     for zone in zones:
-        d = "".join(path([project(lat, lon) for lat, lon in ring], closed=True, tolerance=1) for ring in zone["rings"])
+        tolerance = 4 if zone["kind"] == "areaB" else 1
+        d = "".join(path([project(lat, lon) for lat, lon in ring], closed=True, tolerance=tolerance) for ring in zone["rings"])
         groups[zone["kind"]].append((zone, d))
     return groups
 
@@ -180,31 +206,39 @@ def build_fragment(data):
     for kind, css in (("areaB", "zb"), ("areaC", "zc"), ("ztl", "zl"), ("pedestrian", "zp")):
         for zone, d in zones[kind]:
             label = "Area B" if kind == "areaB" else "Area C" if kind == "areaC" else zone["name"]
-            info = {"areaB": "Feriali 7:30–19:30, festivi esclusi", "areaC": "Feriali 7:30–19:30, festivi esclusi · in moto non si paga"}.get(kind) or schedule_text(zone)
-            zone_paths.append(f'<path class="{css}" d="{d}" data-n="{e(label)}" data-i="{e(info)}"/>')
+            # Le descrizioni comuni a tutte le zone di un tipo stanno nello script (INFO).
+            extra = f' data-i="{e(schedule_text(zone))}"' if kind == "ztl" and zone["schedule"] else ""
+            zone_paths.append(f'<path class="{css}" d="{d}" data-n="{e(label)}"{extra}/>')
 
     gate_marks = "".join(
-        f'<circle class="g{z.lower()}" cx="{x}" cy="{y}" r="11" data-n="{e(name)}" data-i="Varco di Area {z}"/>'
-        for z, name, x, y in gates
+        f'<g class="g{zone.lower()}" data-i="Varco di Area {zone}">'
+        + "".join(f'<circle cx="{x}" cy="{y}" data-n="{e(name)}"/>' for z, name, x, y in gates if z == zone)
+        + "</g>"
+        for zone in ("B", "C")
     )
     labels = []
     for name, lat, lon, style in LANDMARKS:
         x, y = project(lat, lon)
         labels.append(f'<text class="lb {style}" x="{round(x)}" y="{round(y)}">{e(name)}</text>')
 
-    road_svg = "".join(f'<path class="c{k}" d="{roads[k]}"/>' for k in ("r", "t", "s", "p", "m") if roads[k])
-    road_svg += "".join(f'<path class="f{k}" d="{roads[k]}"/>' for k in ("w", "r", "t", "s", "p", "m") if roads[k])
+    defs = "".join(f'<path id="ztlm-{k}" d="{roads[k]}"/>' for k in ("w", "r", "t", "s", "p", "m") if roads[k])
+    road_svg = "".join(f'<use href="#ztlm-{k}" class="c{k}"/>' for k in ("r", "t", "s", "p", "m") if roads[k])
+    road_svg += "".join(f'<use href="#ztlm-{k}" class="f{k}"/>' for k in ("w", "r", "t", "s", "p", "m") if roads[k])
 
-    svg = f'''<svg id="ztlm-svg" viewBox="{" ".join(map(str, START_VIEW))}" role="img" aria-labelledby="ztlm-title" preserveAspectRatio="xMidYMid meet">
+    box = area_c_outline()["box"]
+    pad = (box[2] - box[0]) * 0.06
+    start = [round(box[0] - pad), round(box[1] - pad), round(box[2] - box[0] + 2 * pad), round(box[3] - box[1] + 2 * pad)]
+    svg = f'''<svg id="ztlm-svg" viewBox="{" ".join(map(str, start))}" role="img" aria-labelledby="ztlm-title" preserveAspectRatio="xMidYMid meet">
 <title id="ztlm-title">Mappa di Milano con Area C, Area B, ZTL, aree pedonali e varchi</title>
 <rect x="-4000" y="-4000" width="{WIDTH + 8000}" height="{HEIGHT + 8000}" class="bg"/>
+<defs>{defs}</defs>
 <g class="osm"><path class="pk" d="{parks}"/><path class="wa" d="{water_areas}"/><path class="wl" d="{water_lines}"/><path class="rl" d="{rail}"/>{road_svg}</g>
 <g class="zones">{"".join(zone_paths)}</g>
 <g class="labels">{"".join(labels)}<text class="lb zone" x="{round(project(45.4598, 9.1985)[0])}" y="{round(project(45.4598, 9.1985)[1])}">AREA C</text></g>
 <g class="gates">{gate_marks}</g>
 </svg>'''
 
-    return TEMPLATE.replace("{{SVG}}", svg).replace("{{START}}", json.dumps(START_VIEW)).replace(
+    return TEMPLATE.replace("{{SVG}}", svg).replace("{{START}}", json.dumps(start)).replace(
         "{{BOUNDS}}", json.dumps([0, 0, WIDTH, HEIGHT])
     ).replace("{{GATES}}", str(len(gates))).replace("{{ZONES}}", str(len(zones["ztl"]) + len(zones["pedestrian"])))
 
@@ -219,7 +253,7 @@ TEMPLATE = r'''<div id="ztlm" class="ztlm" data-layers="c b l p g">
 #ztlm .wa{fill:#a8d4f5}
 #ztlm .wl{fill:none;stroke:#a8d4f5;stroke-width:14;stroke-linecap:round;stroke-linejoin:round}
 #ztlm .rl{fill:none;stroke:#bdc1c6;stroke-width:4;stroke-dasharray:14 10}
-#ztlm .osm path[class^=c],#ztlm .osm path[class^=f]{fill:none;stroke-linecap:round;stroke-linejoin:round}
+#ztlm use{fill:none;stroke-linecap:round;stroke-linejoin:round}
 #ztlm .cr{stroke:#dadce0;stroke-width:9}#ztlm .fr{stroke:#fff;stroke-width:6}
 #ztlm .ct{stroke:#dadce0;stroke-width:13}#ztlm .ft{stroke:#fff;stroke-width:10}
 #ztlm .cs{stroke:#e8d27a;stroke-width:16}#ztlm .fs{stroke:#fff6c9;stroke-width:12}
@@ -233,7 +267,7 @@ TEMPLATE = r'''<div id="ztlm" class="ztlm" data-layers="c b l p g">
 #ztlm .zp{fill:#9334e6;fill-opacity:.28;stroke:#8430ce;stroke-width:2}
 #ztlm .zones path:hover{fill-opacity:.5}
 #ztlm .zc:hover,#ztlm .zb:hover{fill-opacity:.12}
-#ztlm .gc,#ztlm .gb{stroke:#fff;stroke-width:5;cursor:pointer}
+#ztlm .gc circle,#ztlm .gb circle{r:11px;stroke:#fff;stroke-width:5;cursor:pointer}
 #ztlm .gc{fill:#d93025}#ztlm .gb{fill:#1a73e8}
 #ztlm .gates circle:hover,#ztlm .gates circle.on{r:17}
 #ztlm .lb{font-size:calc(var(--k,2) * 12.5px);fill:#5f6368;paint-order:stroke;stroke:#fff;stroke-width:calc(var(--k,2) * 3px);stroke-linejoin:round;text-anchor:middle;pointer-events:none;font-weight:500}
@@ -304,14 +338,16 @@ svg.addEventListener('pointermove',function(e){if(!pts[e.pointerId])return;var i
  pts[e.pointerId]=[e.clientX,e.clientY]});
 function up(e){delete pts[e.pointerId];if(!Object.keys(pts).length)root.classList.remove('drag')}
 svg.addEventListener('pointerup',up);svg.addEventListener('pointercancel',up);
-function show(el){if(last)last.classList.remove('on');last=el;el.classList.add('on');card.querySelector('b').textContent=el.getAttribute('data-n');card.querySelector('span').textContent=el.getAttribute('data-i');card.hidden=false}
+var INFO={zb:'Area B · feriali 7:30–19:30, festivi esclusi',zc:'Area C · feriali 7:30–19:30, festivi esclusi · in moto non si paga',zl:'ZTL, considerata sempre attiva',zp:'Area pedonale, sempre attiva'};
+function info(el){return el.getAttribute('data-i')||el.parentNode.getAttribute('data-i')||INFO[el.getAttribute('class')]||''}
+function show(el){if(last)last.classList.remove('on');last=el;el.classList.add('on');card.querySelector('b').textContent=el.getAttribute('data-n');card.querySelector('span').textContent=info(el);card.hidden=false}
 svg.addEventListener('click',function(e){if(moved)return;var el=e.target.closest('[data-n]');if(el){show(el)}else{card.hidden=true;if(last)last.classList.remove('on')}});
 card.querySelector('button').onclick=function(){card.hidden=true;if(last)last.classList.remove('on')};
 root.querySelectorAll('.ztlm-zoom button').forEach(function(b){b.onclick=function(){zoom(parseFloat(b.getAttribute('data-z')))}});
 root.querySelectorAll('.ztlm-chips button').forEach(function(b){b.onclick=function(){var on=b.getAttribute('aria-pressed')!=='true';b.setAttribute('aria-pressed',on);var l=root.getAttribute('data-layers').split(' ').filter(function(x){return x&&x!==b.getAttribute('data-l')});if(on)l.push(b.getAttribute('data-l'));root.setAttribute('data-layers',l.join(' '))}});
-var items=[].slice.call(svg.querySelectorAll('[data-n]')).map(function(el){return{el:el,n:el.getAttribute('data-n'),i:el.getAttribute('data-i')}});
+var items=[].slice.call(svg.querySelectorAll('[data-n]')).map(function(el){return{el:el,n:el.getAttribute('data-n'),i:info(el)}});
 function norm(s){return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'')}
-function pick(it){var b=it.el.getBBox();fly(b.x+b.width/2,b.y+b.height/2,Math.max(b.width,b.height)*3+400);show(it.el);res.innerHTML='';q.value=it.n}
+function pick(it){var b=it.el.getBBox();fly(b.x+b.width/2,b.y+b.height/2,Math.max(b.width,b.height)*3+900);show(it.el);res.innerHTML='';q.value=it.n}
 q.addEventListener('input',function(){var t=norm(q.value.trim());res.innerHTML='';if(t.length<2)return;var seen={};items.filter(function(it){return norm(it.n).indexOf(t)>=0}).slice(0,40).forEach(function(it){var key=it.n+it.i;if(seen[key])return;seen[key]=1;if(res.children.length>=8)return;var li=document.createElement('li');li.setAttribute('role','option');li.textContent=it.n;var sm=document.createElement('small');sm.textContent=it.i.split(',')[0];li.appendChild(sm);li.onclick=function(){pick(it)};res.appendChild(li)})});
 q.addEventListener('keydown',function(e){if(e.key==='Enter'&&res.firstChild){res.firstChild.click()}if(e.key==='Escape'){res.innerHTML=''}});
 apply();window.addEventListener('resize',apply);

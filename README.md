@@ -36,6 +36,7 @@ Tested on an iPhone 15 Pro Max running iOS 27.0.1: background updates with Googl
 | `Shared` | Data model shared by the app and the extension |
 | `Resources` | Gates (City of Milan GeoJSON) and local zones (`zone_locali.json`) |
 | `tools/build_zone_data.py` | Downloads the gates and regenerates `zone_locali.json` from dataset ds51, with schedules and exclusions |
+| `site/` | The [ztlive.it](https://ztlive.it) website: interactive ZTL map (`tools/build_site_map.py`, from OpenStreetMap and City of Milan data) and Cleitext pages (`site/build_site.py`) |
 | `tools/make_artwork.py` | Regenerates the app icon, logo and demo GIF |
 | `project.yml` | Project definition for XcodeGen |
 
