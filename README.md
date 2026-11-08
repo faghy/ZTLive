@@ -20,7 +20,13 @@ Alerts are shown as a **Live Activity**, visible on CarPlay, the Lock Screen and
 - **Colour-coded Live Activity** (orange when approaching, red when imminent), shown on CarPlay on top of Google Maps; when the road is clear it shrinks to a small green shield.
 - **Optional voice alerts** that briefly duck navigation or music.
 - **Route check before you leave**: share a route from Google Maps to ZTLive (Share → ZTLive) or paste its link in the *Route* tab. ZTLive recomputes it with Apple Maps, lists the zones it crosses with the estimated time you will pass them, and if an Apple Maps alternative avoids them, opens Google Maps with waypoints that follow it.
+- **Switch to another mode before the zone**: when the route enters a ZTL, ZTLive offers two Google Maps links: the same car route up to about 50 m before the entry, then walking, cycling or public transport to the destination.
+- **Destination in a pedestrian area**: if the place you are looking for is inside a zone the car route does not enter (for example Piazza del Duomo), it says so, with the distance left to cover without the car and the same two links.
+- **Area C switched off**: outside its hours the check says so, with when it starts again (for example "back on Monday at 7:30").
+- **Always up-to-date data**: gates and zones update themselves without reinstalling the app (see [Data](#data)).
 - **Simulation mode** to test the Live Activity and CarPlay while parked.
+
+Website with the interactive map of Milan's ZTLs: [ztlive.it](https://ztlive.it).
 
 Tested on an iPhone 15 Pro Max running iOS 27.0.1: background updates with Google Maps in the foreground, CarPlay in a car and on the TFT display of a Honda Africa Twin (audio in the helmet with the intercom connected).
 

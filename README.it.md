@@ -20,7 +20,13 @@ Gli avvisi arrivano come **Live Activity**, visibile su CarPlay, schermata di bl
 - **Live Activity** colorata (arancione in avvicinamento, rosso se imminente), visibile su CarPlay anche sopra Google Maps; a strada libera si riduce a un piccolo scudo verde.
 - **Avvisi vocali** opzionali, che abbassano per un attimo la navigazione o la musica.
 - **Controllo del percorso prima di partire**: condividi un percorso da Google Maps a ZTLive (Condividi → ZTLive) o incollane il link nella scheda *Percorso*. ZTLive lo ricalcola con Apple Maps, elenca le zone attraversate con l'orario stimato di passaggio e, se un'alternativa di Apple Maps le evita, riapre Google Maps con tappe che la seguono.
+- **Cambio di mezzo prima della zona**: se il percorso entra in una ZTL, ZTLive propone due link per Google Maps: lo stesso percorso in auto fino a circa 50 m prima dell'ingresso, poi a piedi, in bici o con i mezzi fino alla destinazione.
+- **Destinazione in area pedonale**: se il luogo cercato è dentro una zona in cui il percorso in auto non entra (per esempio Piazza del Duomo), lo segnala con i metri da fare senza auto e lo stesso doppio link.
+- **Area C spenta**: fuori orario il controllo lo dice, con il momento in cui riapre (per esempio "riapre lunedì alle 7:30").
+- **Dati sempre aggiornati**: varchi e zone si aggiornano da soli, senza reinstallare l'app (vedi [Dati](#dati)).
 - **Simulazione** per provare Live Activity e CarPlay da fermi.
+
+Sito con la mappa interattiva delle ZTL di Milano: [ztlive.it](https://ztlive.it).
 
 Verificato su iPhone 15 Pro Max con iOS 27.0.1: aggiornamento in background con Google Maps aperto, CarPlay in auto e sul TFT di una Honda Africa Twin (audio nel casco con interfono collegato).
 
