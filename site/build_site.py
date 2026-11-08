@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 Serafino Christian
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 """Costruisce il sito ztlive.it su Cleitext tramite l'API REST.
 
 Uso: python3 site/build_site.py percorso/del/token.txt

@@ -1,3 +1,6 @@
+# Copyright (C) 2026 Serafino Christian
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 name: Aggiorna dati del Comune
 
 # Ogni lunedì scarica varchi e zone dal portale open data del Comune di Milano.

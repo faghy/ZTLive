@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 Serafino Christian
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 """Genera Resources/zone_locali.json dal dataset ds51 (aree pedonali e ZTL) del Comune di Milano.
 
 Uso: python3 tools/build_zone_data.py [percorso/disciplina_aree.geojson]

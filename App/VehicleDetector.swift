@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Serafino Christian
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 import AVFoundation
 
 /// Riconosce il veicolo dal dispositivo audio collegato (CarPlay dell'auto o della moto, interfono).

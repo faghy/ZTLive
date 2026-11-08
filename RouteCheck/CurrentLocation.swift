@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Serafino Christian
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 import CoreLocation
 
 /// Legge una volta la posizione attuale, per i percorsi che partono da dove ti trovi.

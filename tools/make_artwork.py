@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 Serafino Christian
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 """Genera icona dell'app, logo per il README e GIF dimostrativa.
 
 Uso: python3 tools/make_artwork.py

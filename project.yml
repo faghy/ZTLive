@@ -1,3 +1,6 @@
+# Copyright (C) 2026 Serafino Christian
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 # Progetto Xcode generato con XcodeGen (`xcodegen generate`), anche in CI.
 name: ZTLive
 options:

@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 Serafino Christian
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 """Genera la mappa interattiva delle ZTL di Milano per il sito ztlive.it.
 
 Uso: python3 tools/build_site_map.py percorso/milano-osm.json

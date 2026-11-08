@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Serafino Christian
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 import Foundation
 
 /// Quali zone contano per il veicolo e le impostazioni scelte.

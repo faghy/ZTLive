@@ -75,3 +75,11 @@ Source: [City of Milan Open Data portal](https://dati.comune.milano.it), CC BY 4
 To refresh the data by hand: `python3 tools/build_zone_data.py`. GitHub Actions runs it every Monday (`update-data.yml`) and commits the files when they change; the app downloads them on launch (at most every 6 hours, or by pulling down the Alerts screen) and falls back to the bundled copy when offline.
 
 This information is indicative only: road signs and the City's official acts always prevail.
+
+## License
+
+ZTLive is free software: you can use, study, modify and redistribute it under the [GNU General Public License version 3](LICENSE) or, at your option, any later version (GPL-3.0-or-later).
+
+An [additional permission](APP-STORE-EXCEPTION.md) (GPLv3 section 7) lets the app, modified or not, be distributed through the App Store and TestFlight, provided the source code stays available under the same license.
+
+Copyright (C) 2026 Serafino Christian. The data have their own licenses: CC BY 4.0 for the City of Milan open data, ODbL for the © OpenStreetMap data used in the website map.

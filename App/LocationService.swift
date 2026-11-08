@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Serafino Christian
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 import CoreLocation
 
 /// GPS continuo, anche con l'app in background (es. mentre si usa Google Maps).

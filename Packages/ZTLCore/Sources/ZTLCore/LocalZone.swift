@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Serafino Christian
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 import Foundation
 
 /// Fascia oraria settimanale. Inizia nei `days` (1 = lunedì ... 7 = domenica) ai minuti `from`;

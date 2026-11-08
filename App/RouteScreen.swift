@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Serafino Christian
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 import SwiftUI
 
 /// Controllo di un percorso condiviso da Google Maps, incollandone il link.

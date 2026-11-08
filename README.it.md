@@ -75,3 +75,11 @@ Fonte: [Portale Open Data del Comune di Milano](https://dati.comune.milano.it), 
 Per aggiornare i dati a mano: `python3 tools/build_zone_data.py`. GitHub Actions lo esegue ogni lunedì (`update-data.yml`) e salva i file se sono cambiati; l'app li scarica all'avvio (al massimo ogni 6 ore, o trascinando in basso la schermata Avvisi) e senza connessione usa quelli inclusi.
 
 Le informazioni hanno valore indicativo: fanno fede la segnaletica e gli atti ufficiali del Comune.
+
+## Licenza
+
+ZTLive è software libero: lo puoi usare, studiare, modificare e ridistribuire secondo la [GNU General Public License versione 3](LICENSE) o, a tua scelta, una versione successiva (GPL-3.0-or-later).
+
+Con un [permesso aggiuntivo](APP-STORE-EXCEPTION.md) (sezione 7 della GPLv3) l'app, anche modificata, si può distribuire tramite App Store e TestFlight, purché il codice sorgente resti disponibile con la stessa licenza.
+
+Copyright (C) 2026 Serafino Christian. I dati hanno licenze proprie: CC BY 4.0 per gli open data del Comune di Milano, ODbL per i dati di © OpenStreetMap usati nella mappa del sito.
