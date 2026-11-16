@@ -1,0 +1,109 @@
+# Copyright (C) 2026 Serafino Christian
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+# Build firmata caricata su TestFlight.
+# Parte a mano (Actions → TestFlight → Run workflow) o quando cambia project.yml, cioè a ogni nuova versione:
+# App Store Connect rifiuta due build con lo stesso CURRENT_PROJECT_VERSION.
+#
+# Serve, in Settings → Secrets and variables → Actions del repository:
+#   variabile APPLE_TEAM_ID  Team ID dell'Apple Developer Program (non segreto)
+#   secret    ASC_KEY_ID     Key ID della chiave API di App Store Connect (accesso Admin)
+#   secret    ASC_ISSUER_ID  Issuer ID
+#   secret    ASC_KEY_P8     contenuto del file AuthKey_XXXXXXXXXX.p8
+# Con la chiave API Xcode crea da solo certificato, App ID e profili (firma automatica).
+# Senza questi valori il workflow si ferma subito, senza errori.
+name: TestFlight
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [project.yml]
+
+concurrency:
+  group: testflight
+  cancel-in-progress: false
+
+jobs:
+  upload:
+    name: Build firmata e caricamento su TestFlight
+    runs-on: macos-latest
+    env:
+      TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+    steps:
+      - name: Controlla la configurazione
+        id: config
+        run: |
+          if [ -n "$TEAM_ID" ] && [ -n "$ASC_KEY_ID" ] && [ -n "$ASC_ISSUER_ID" ] && [ -n "$ASC_KEY_P8" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::TestFlight non ancora configurato: mancano APPLE_TEAM_ID o i secret ASC_*."
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.config.outputs.ready == 'true'
+
+      - uses: maxim-lobanov/setup-xcode@v1
+        if: steps.config.outputs.ready == 'true'
+        with:
+          xcode-version: latest-stable
+
+      - name: Prepara chiave e opzioni di esportazione
+        if: steps.config.outputs.ready == 'true'
+        run: |
+          KEY="$RUNNER_TEMP/AuthKey_$ASC_KEY_ID.p8"
+          printf '%s\n' "$ASC_KEY_P8" > "$KEY"
+          chmod 600 "$KEY"
+          echo "KEY_PATH=$KEY" >> "$GITHUB_ENV"
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>teamID</key><string>$TEAM_ID</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>manageAppVersionAndBuildNumber</key><false/>
+            <key>uploadSymbols</key><true/>
+          </dict>
+          </plist>
+          EOF
+
+      - name: Genera il progetto Xcode
+        if: steps.config.outputs.ready == 'true'
+        run: |
+          brew install xcodegen
+          xcodegen generate
+
+      - name: Archivia
+        if: steps.config.outputs.ready == 'true'
+        run: |
+          xcodebuild -project ZTLive.xcodeproj -scheme ZTLive \
+            -configuration Release -destination 'generic/platform=iOS' \
+            -archivePath build/ZTLive.xcarchive \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$KEY_PATH" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_STYLE=Automatic \
+            archive
+
+      - name: Carica su App Store Connect
+        if: steps.config.outputs.ready == 'true'
+        run: |
+          xcodebuild -exportArchive \
+            -archivePath build/ZTLive.xcarchive \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -exportPath build/export \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$KEY_PATH" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+
+      - name: Cancella la chiave
+        if: always()
+        run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8

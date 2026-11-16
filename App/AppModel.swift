@@ -14,6 +14,9 @@ enum RunMode {
 
 @MainActor
 final class AppModel: ObservableObject {
+    /// Unica istanza, condivisa tra l'app e la schermata CarPlay.
+    static let shared = AppModel()
+
     typealias State = GateActivityAttributes.ContentState
 
     @Published private(set) var mode: RunMode = .off

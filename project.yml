@@ -10,8 +10,8 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.0"
-    MARKETING_VERSION: "0.5.2"
-    CURRENT_PROJECT_VERSION: "10"
+    MARKETING_VERSION: "0.5.3"
+    CURRENT_PROJECT_VERSION: "11"
     TARGETED_DEVICE_FAMILY: "1"
 
 packages:
@@ -55,6 +55,8 @@ targets:
           - comgooglemapsurl
         NSSupportsLiveActivities: true
         NSSupportsLiveActivitiesFrequentUpdates: true
+        # Solo cifratura standard di iOS (HTTPS): evita la domanda sull'esportazione a ogni build di TestFlight.
+        ITSAppUsesNonExemptEncryption: false
     scheme: {}
 
   ZTLiveWidget:
