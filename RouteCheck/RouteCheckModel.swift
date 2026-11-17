@@ -137,7 +137,7 @@ final class RouteCheckModel: ObservableObject {
         Self.logger.notice("\(line, privacy: .public)")
     }
 
-    private static let logger = Logger(subsystem: "com.faghy.ztlive", category: "percorso")
+    private static let logger = Logger(subsystem: "it.ztlive.app", category: "percorso")
 
     private func reanalyze() {
         guard let result else { return }
