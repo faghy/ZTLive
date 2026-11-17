@@ -81,16 +81,26 @@ jobs:
 
       - name: Archivia
         if: steps.config.outputs.ready == 'true'
+        # Xcode scarica i profili di firma mentre compila le estensioni in parallelo e a volte ne cerca uno
+        # prima di averlo salvato ("Build input file cannot be found: …mobileprovision"): al secondo
+        # tentativo il profilo è già sul disco.
         run: |
-          xcodebuild -project ZTLive.xcodeproj -scheme ZTLive \
-            -configuration Release -destination 'generic/platform=iOS' \
-            -archivePath build/ZTLive.xcarchive \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "$KEY_PATH" \
-            -authenticationKeyID "$ASC_KEY_ID" \
-            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
-            DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_STYLE=Automatic \
-            archive
+          for attempt in 1 2 3; do
+            if xcodebuild -project ZTLive.xcodeproj -scheme ZTLive \
+              -configuration Release -destination 'generic/platform=iOS' \
+              -archivePath build/ZTLive.xcarchive \
+              -allowProvisioningUpdates \
+              -authenticationKeyPath "$KEY_PATH" \
+              -authenticationKeyID "$ASC_KEY_ID" \
+              -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+              DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_STYLE=Automatic \
+              archive; then
+              exit 0
+            fi
+            echo "::warning::Archiviazione non riuscita (tentativo $attempt), riprovo"
+            ls -1 ~/Library/Developer/Xcode/UserData/Provisioning\ Profiles/ || true
+          done
+          exit 1
 
       - name: Carica su App Store Connect
         if: steps.config.outputs.ready == 'true'
