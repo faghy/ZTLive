@@ -20,7 +20,8 @@
   "pages": {
     "home": "01a1bba1-59db-761e-8687-3980b0ba5d20",
     "privacy": "01a1bba1-5de5-75d3-a2fc-c1ced210fde9",
-    "cookies": "01a1bba1-602d-7398-980c-31cc0587d941"
+    "cookies": "01a1bba1-602d-7398-980c-31cc0587d941",
+    "app_privacy": "01a1f361-318d-740c-83fe-d7a011ebecaf"
   },
   "menus": {
     "primary": "01a1bba1-630b-7724-b318-1c42fd37be3e",

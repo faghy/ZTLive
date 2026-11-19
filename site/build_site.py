@@ -267,6 +267,53 @@ def home(media):
     return document(blocks)
 
 
+def app_privacy():
+    """Informativa dell'app iOS, richiesta da App Store Connect (URL della privacy policy)."""
+    d = Doc()
+    blocks = [
+        d.section("", [
+            d.h(1, "Privacy dell'app ZTLive"),
+            d.p("Ultimo aggiornamento: 19 novembre 2026.", "cv-eyebrow"),
+            d.p("Questa informativa riguarda l'app ZTLive per iPhone. Per il sito ztlive.it vale la pagina Privacy.", "cv-lead"),
+            d.h(2, "In breve"),
+            d.ul([
+                "ZTLive non raccoglie dati personali: niente account, pubblicità, statistiche o tracciamento.",
+                "La posizione si usa solo sul telefono per capire se ti stai avvicinando a un varco e non viene inviata a nessuno.",
+                "Le impostazioni (veicolo, voce, zone da controllare) restano salvate sul telefono.",
+            ], "cv-checks"),
+            d.h(2, "Titolare"),
+            d.p(["Serafino Christian, ", ("link", "mailto:fag@faghy.it", "fag@faghy.it"), "."]),
+            d.h(2, "Posizione"),
+            d.p("Con il tuo permesso ZTLive legge la posizione GPS, anche in background mentre usi il navigatore, "
+                "e la confronta con i varchi e le zone salvati nell'app. Il calcolo avviene sull'iPhone: "
+                "la posizione non viene registrata né trasmessa. Puoi revocare il permesso in Impostazioni → ZTLive → Posizione."),
+            d.h(2, "Servizi esterni"),
+            d.ul([
+                ["Dati delle zone: l'app scarica i varchi e le zone aggiornati dal repository pubblico su GitHub. "
+                 "Come per qualunque pagina web, GitHub riceve l'indirizzo IP della richiesta (",
+                 ("link", "https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement", "informativa di GitHub"), ")."],
+                ["Controllo del percorso: i punti di partenza e di arrivo del percorso che condividi vengono inviati ad Apple Mappe "
+                 "per calcolare la strada (", ("link", "https://www.apple.com/legal/privacy/it/", "informativa di Apple"), ")."],
+                ["Google Maps: i link che ZTLive ti propone si aprono in Google Maps, che li tratta secondo la ",
+                 ("link", "https://policies.google.com/privacy?hl=it", "propria informativa"), "."],
+                "Gli avvisi vocali sono generati dall'iPhone, senza servizi esterni.",
+            ]),
+            d.h(2, "Rapporti sugli arresti anomali"),
+            d.p("Se nelle impostazioni dell'iPhone hai scelto di condividerli con gli sviluppatori, Apple può inviarmi rapporti "
+                "anonimi sugli arresti anomali dell'app. Non contengono la tua posizione."),
+            d.h(2, "Minori"),
+            d.p("L'app non raccoglie dati di nessuno, quindi neanche di minori."),
+            d.h(2, "I tuoi diritti"),
+            d.p(["Non conservo dati che ti riguardano. Per qualunque domanda scrivi a ",
+                 ("link", "mailto:fag@faghy.it", "fag@faghy.it"),
+                 ". Puoi anche rivolgerti al Garante per la protezione dei dati personali."]),
+            d.h(2, "Modifiche"),
+            d.p("Se l'app cambierà il modo in cui tratta i dati, questa pagina verrà aggiornata prima della nuova versione."),
+        ]),
+    ]
+    return document(blocks)
+
+
 def main():
     if len(sys.argv) != 2:
         sys.exit(__doc__)
@@ -340,6 +387,15 @@ def main():
             pages[kind] = api.call("POST", "/entries", {"type": "page", **body})["id"]
             STATE.write_text(json.dumps(state, indent=2))
         api.call("POST", f"/entries/{pages[kind]}/publish", {"visibility": "public"})
+    body = {"title": "Privacy dell'app", "slug": "privacy-app", "document": app_privacy(),
+            "fields": {"seo": {"title": "Privacy dell'app ZTLive",
+                               "description": "ZTLive non raccoglie dati personali: la posizione resta sull'iPhone."}}}
+    if "app_privacy" in pages:
+        api.call("PATCH", f"/entries/{pages['app_privacy']}", body)
+    else:
+        pages["app_privacy"] = api.call("POST", "/entries", {"type": "page", **body})["id"]
+        STATE.write_text(json.dumps(state, indent=2))
+    api.call("POST", f"/entries/{pages['app_privacy']}/publish", {"visibility": "public"})
     config.setdefault("pages", {})["it"] = {"privacy": pages["privacy"], "cookies": pages["cookies"]}
     api.call("PUT", "/ext/privacy/config", config)
 
@@ -360,6 +416,7 @@ def main():
         ("footer", "Piè di pagina", [
             {"kind": "entry", "entryId": pages["privacy"], "label": "Privacy"},
             {"kind": "entry", "entryId": pages["cookies"], "label": "Cookie"},
+            {"kind": "entry", "entryId": pages["app_privacy"], "label": "Privacy dell'app"},
             {"kind": "url", "url": GITHUB, "label": "Codice su GitHub"},
         ]),
     ):
