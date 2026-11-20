@@ -413,4 +413,10 @@ final class GoogleMapsLinkTests: XCTestCase {
         let atStart = RouteHit(zoneID: "test", name: "Test", zone: .ztl, entry: route[0], distanceAlong: 0, passTime: Date())
         XCTAssertNil(RouteAnalyzer.switchPoint(route: route, before: atStart))
     }
+
+    func testPrettifyKeepsRomanNumerals() {
+        XCTAssertEqual(GateLoader.prettify("XX SETTEMBRE"), "XX Settembre")
+        XCTAssertEqual(GateLoader.prettify("003 - PORTA TENAGLIA"), "Porta Tenaglia")
+        XCTAssertEqual(GateLoader.prettify("VIALE XXIV MAGGIO"), "Viale XXIV Maggio")
+    }
 }

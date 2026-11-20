@@ -70,13 +70,16 @@ public enum GateLoader {
         }
     }
 
-    /// "PORTA TENAGLIA" → "Porta Tenaglia", "001 - CORELLI" → "Corelli".
+    /// "PORTA TENAGLIA" → "Porta Tenaglia", "001 - CORELLI" → "Corelli", "XX SETTEMBRE" → "XX Settembre".
     static func prettify(_ name: String) -> String {
         var trimmed = name.trimmingCharacters(in: .whitespaces)
         if let range = trimmed.range(of: #"^\d+\s*-\s*"#, options: .regularExpression) {
             trimmed.removeSubrange(range)
         }
-        return trimmed.capitalized
+        // I numeri romani (XX Settembre, XXV Aprile) restano maiuscoli.
+        return trimmed.split(separator: " ", omittingEmptySubsequences: false).map { word -> String in
+            word.range(of: #"^[XVI]{2,}$"#, options: .regularExpression) != nil ? String(word) : word.capitalized
+        }.joined(separator: " ")
     }
 }
 

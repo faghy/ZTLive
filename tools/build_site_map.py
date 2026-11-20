@@ -16,6 +16,7 @@ Lo stile richiama Google Maps; nessuna risorsa esterna, nessun cookie.
 import html
 import json
 import math
+import re
 import sys
 from pathlib import Path
 
@@ -185,7 +186,8 @@ def gate_layers():
             if props.get("stato") not in (None, "ATTIVI E SANZIONANTI"):
                 continue
             lon, lat = feature["geometry"]["coordinates"][:2]
-            name = (props.get("label") or props.get("nome") or "Varco").split(" - ", 1)[-1].title()
+            name = (props.get("label") or props.get("nome") or "Varco").split(" - ", 1)[-1]
+            name = " ".join(w if re.fullmatch(r"[XVI]{2,}", w) else w.title() for w in name.split(" "))
             x, y = project(lat, lon)
             gates.append((zone, name, round(x), round(y)))
     return gates
