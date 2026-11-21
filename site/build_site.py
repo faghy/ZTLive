@@ -10,6 +10,7 @@ Rilanciabile: gli id creati sono in site/state.json e alla volta successiva le v
 Le pagine usano i blocchi del tema Canvas; solo la mappa (site/ztl-map.html, da tools/build_site_map.py)
 sta in un blocco HTML.
 """
+import base64
 import json
 import mimetypes
 import sys
@@ -143,6 +144,16 @@ class Doc:
         return self.block("core/html", {"content": content})
 
 
+def app_store_badge(align="center"):
+    """Badge ufficiale di Apple «Scarica su App Store» (nero, italiano), incorporato: niente risorse esterne."""
+    svg = base64.b64encode((HERE / "img" / "app-store-badge-it.svg").read_bytes()).decode()
+    return Doc().html(
+        f'<p style="text-align:{align};margin:1.25rem 0 .5rem">'
+        f'<a href="{APP_STORE}" target="_blank" rel="noopener" aria-label="Scarica ZTLive su App Store">'
+        f'<img src="data:image/svg+xml;base64,{svg}" alt="Scarica su App Store" width="162" height="54" '
+        f'style="height:54px;width:auto;display:inline-block"></a></p>')
+
+
 def inline(content):
     """Testo semplice, oppure lista di stringhe, ("testo", "bold") e ("link", href, testo)."""
     if isinstance(content, str):
@@ -176,8 +187,9 @@ def home(media):
             d.h(1, ["L'avviso ZTL ", ("prima del varco", "bold")]),
             d.p("ZTLive ti avvisa a voce e su CarPlay quando stai per entrare in una zona a traffico limitato, "
                 "mentre navighi con Google Maps. In auto e in moto.", "cv-lead"),
-            d.buttons([("Scarica sull'App Store", APP_STORE, False), ("Esplora la mappa", "#mappa", True)]),
+            app_store_badge(),
             d.p("Gratis per iPhone, senza pubblicità né account.", "cv-small"),
+            d.buttons([("Esplora la mappa", "#mappa", True), ("Cosa fa", "#funzioni", True)]),
         ], anchor="inizio"),
         d.group([
             d.html(media["map_html"]),
@@ -216,7 +228,7 @@ def home(media):
                         "Funziona anche sul display della moto con CarPlay e interfono",
                         "A strada libera resta solo un piccolo scudo verde",
                     ], "cv-checks"),
-                    d.buttons([("Scarica ZTLive", APP_STORE, False)]),
+                    app_store_badge("left"),
                 ],
             ], "cv-split"),
         ]),
@@ -268,7 +280,8 @@ def home(media):
         d.section("cv-bg-brand cv-center", [
             d.h(2, "Scarica ZTLive"),
             d.p("Gratis sull'App Store per iPhone. Novità, nuove città e il codice del progetto sono su GitHub.", "cv-lead"),
-            d.buttons([("Scarica sull'App Store", APP_STORE, False), ("Segui su GitHub", GITHUB, True)]),
+            app_store_badge(),
+            d.buttons([("Segui su GitHub", GITHUB, True)]),
         ], anchor="scarica"),
     ]
     return document(blocks)
