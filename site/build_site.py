@@ -25,6 +25,7 @@ ROOT = HERE.parent
 STATE = HERE / "state.json"
 
 GITHUB = "https://github.com/faghy/ZTLive"
+APP_STORE = "https://apps.apple.com/it/app/ztlive/id6835826176"
 # Matomo su server3, modalità anonima (senza cookie, nessun consenso): None finché il sito non esiste.
 MATOMO_URL = "https://analytics.dueclic.eu"
 MATOMO_SITE_ID = 57
@@ -175,7 +176,8 @@ def home(media):
             d.h(1, ["L'avviso ZTL ", ("prima del varco", "bold")]),
             d.p("ZTLive ti avvisa a voce e su CarPlay quando stai per entrare in una zona a traffico limitato, "
                 "mentre navighi con Google Maps. In auto e in moto.", "cv-lead"),
-            d.buttons([("Esplora la mappa", "#mappa", False), ("Cosa fa", "#funzioni", True)]),
+            d.buttons([("Scarica sull'App Store", APP_STORE, False), ("Esplora la mappa", "#mappa", True)]),
+            d.p("Gratis per iPhone, senza pubblicità né account.", "cv-small"),
         ], anchor="inizio"),
         d.group([
             d.html(media["map_html"]),
@@ -183,7 +185,8 @@ def home(media):
         d.section("cv-tight cv-center", [
             d.p(["Tocca una zona o un varco per vedere nome e orari, oppure cerca una via. "
                  "Zone e varchi vengono dagli ", ("link", L["varchi"], "open data del Comune di Milano"),
-                 " e si aggiornano ogni settimana. Fanno sempre fede i cartelli stradali."]),
+                 " e si aggiornano ogni settimana. Fanno sempre fede i cartelli stradali: varchi, orari e percorsi possono cambiare "
+                 "o contenere errori, e ZTLive non risponde di multe o indicazioni sbagliate."]),
         ]),
         d.section("cv-bg-gray cv-center", [
             d.p("Funzionalità", "cv-eyebrow"),
@@ -213,6 +216,7 @@ def home(media):
                         "Funziona anche sul display della moto con CarPlay e interfono",
                         "A strada libera resta solo un piccolo scudo verde",
                     ], "cv-checks"),
+                    d.buttons([("Scarica ZTLive", APP_STORE, False)]),
                 ],
             ], "cv-split"),
         ]),
@@ -250,19 +254,22 @@ def home(media):
         d.section("cv-bg-soft", [
             d.h(2, ["Domande ", ("frequenti", "bold")], anchor="faq"),
             d.group([
-                d.group([d.h(3, "Dove si scarica?"), d.p("ZTLive è in prova su iPhone e arriverà sull'App Store. Segui il progetto per sapere quando.")]),
-                d.group([d.h(3, "Quanto costa?"), d.p("Durante la prova è gratuita.")]),
+                d.group([d.h(3, "Dove si scarica?"), d.p(["Sull'", ("link", APP_STORE, "App Store"), " per iPhone, in Italia. Serve iOS 18 o successivo."])]),
+                d.group([d.h(3, "Quanto costa?"), d.p("Niente: è gratuita, senza pubblicità, acquisti o account.")]),
                 d.group([d.h(3, "Funziona con il mio navigatore?"), d.p("Sì: lavora in background con Google Maps, Waze o Apple Mappe. Il controllo del percorso parte dalla condivisione di Google Maps.")]),
                 d.group([d.h(3, "Dove finisce la mia posizione?"), d.p("Da nessuna parte: resta sul telefono. ZTLive scarica solo i dati delle zone.")]),
                 d.group([d.h(3, "E in moto?"), d.p("In moto l'Area C non si paga e alcune ZTL ammettono le moto: ZTLive ne tiene conto.")]),
-                d.group([d.h(3, "Posso fidarmi al cento per cento?"), d.p("ZTLive è un aiuto, non un documento ufficiale. Fanno fede i cartelli e le ordinanze del Comune.")]),
+                d.group([d.h(3, "Posso fidarmi al cento per cento?"), d.p("No: ZTLive è un aiuto alla guida, non un documento ufficiale. "
+                                                                      "Varchi, orari e percorsi possono cambiare o contenere errori, e non ci assumiamo "
+                                                                      "responsabilità per multe, percorsi sbagliati o modifiche non ancora recepite. "
+                                                                      "Fanno sempre fede i cartelli e le ordinanze del Comune.")]),
             ], "cv-faq"),
         ]),
         d.section("cv-bg-brand cv-center", [
-            d.h(2, "Segui ZTLive"),
-            d.p("Novità, nuove città e il codice del progetto sono su GitHub.", "cv-lead"),
-            d.buttons([("Segui su GitHub", GITHUB, False)]),
-        ]),
+            d.h(2, "Scarica ZTLive"),
+            d.p("Gratis sull'App Store per iPhone. Novità, nuove città e il codice del progetto sono su GitHub.", "cv-lead"),
+            d.buttons([("Scarica sull'App Store", APP_STORE, False), ("Segui su GitHub", GITHUB, True)]),
+        ], anchor="scarica"),
     ]
     return document(blocks)
 
@@ -352,7 +359,7 @@ def main():
     api.call("PUT", "/themes/active/settings", {"values": {
         "logo": media["logo"]["id"], "favicon": media["favicon"]["id"], "accentColor": "#1a73e8",
         "showTagline": False, "showPoweredBy": False,
-        "footerText": "© 2026 [Serafino Christian](https://faghy.it) · Dati: Comune di Milano (CC BY 4.0) e © OpenStreetMap · Fanno fede i cartelli stradali",
+        "footerText": "© 2026 [Serafino Christian](https://faghy.it) · Dati: Comune di Milano (CC BY 4.0) e © OpenStreetMap · Fanno fede i cartelli stradali: nessuna responsabilità per errori, modifiche o multe",
     }})
 
     # Home.
@@ -360,7 +367,7 @@ def main():
     doc = home({**media, "map_html": (HERE / "ztl-map.html").read_text()})
     seo = {"seo": {
         "title": "ZTLive – Avvisi ZTL a Milano prima del varco, anche su CarPlay",
-        "description": "Mappa delle ZTL di Milano con Area C, Area B e varchi. ZTLive ti avvisa a voce e su CarPlay prima del varco mentre navighi con Google Maps.",
+        "description": "ZTLive, gratis sull'App Store: avvisi a voce e su CarPlay prima dei varchi ZTL di Milano (Area C, Area B) mentre navighi. Con la mappa delle ZTL.",
         "keyphrase": "ZTL Milano",
     }}
     entry = {"title": "ZTLive", "slug": "home", "document": doc, "fields": seo}
@@ -412,11 +419,13 @@ def main():
             {"kind": "url", "url": "/#citta", "label": "Città"},
             {"kind": "url", "url": "/#faq", "label": "Domande"},
             {"kind": "url", "url": GITHUB, "label": "GitHub"},
+            {"kind": "url", "url": APP_STORE, "label": "Scarica"},
         ]),
         ("footer", "Piè di pagina", [
             {"kind": "entry", "entryId": pages["privacy"], "label": "Privacy"},
             {"kind": "entry", "entryId": pages["cookies"], "label": "Cookie"},
             {"kind": "entry", "entryId": pages["app_privacy"], "label": "Privacy dell'app"},
+            {"kind": "url", "url": APP_STORE, "label": "App Store"},
             {"kind": "url", "url": GITHUB, "label": "Codice su GitHub"},
         ]),
     ):

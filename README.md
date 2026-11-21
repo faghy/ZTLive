@@ -26,6 +26,8 @@ Alerts are shown as a **Live Activity**, visible on CarPlay, the Lock Screen and
 - **Always up-to-date data**: gates and zones update themselves without reinstalling the app (see [Data](#data)).
 - **Simulation mode** to test the Live Activity and CarPlay while parked.
 
+**[Get ZTLive on the App Store](https://apps.apple.com/it/app/ztlive/id6835826176)**: free for iPhone, available in Italy.
+
 Website with the interactive map of Milan's ZTLs: [ztlive.it](https://ztlive.it).
 
 Tested on an iPhone 15 Pro Max running iOS 27.0.1: background updates with Google Maps in the foreground, CarPlay in a car and on the TFT display of a Honda Africa Twin (audio in the helmet with the intercom connected).
@@ -48,7 +50,7 @@ Tested on an iPhone 15 Pro Max running iOS 27.0.1: background updates with Googl
 
 ## Build
 
-No Mac required: every push to `main` builds the app on GitHub Actions. The unsigned IPA is published in the [`prototype`](../../releases/tag/prototype) release.
+No Mac required: every push to `main` builds the app on GitHub Actions. The unsigned IPA is published in the [`prototype`](../../releases/tag/prototype) release; when the version changes, the signed build goes to TestFlight and from there to the App Store (`testflight.yml`).
 
 The logic tests run anywhere Swift is available:
 
@@ -56,7 +58,9 @@ The logic tests run anywhere Swift is available:
 swift test --package-path Packages/ZTLCore
 ```
 
-## Installing with SideStore
+## Installing
+
+The easiest way is the [App Store](https://apps.apple.com/it/app/ztlive/id6835826176). To try a build you compiled yourself you can use SideStore:
 
 1. Install [SideStore](https://sidestore.io) on your iPhone following the official guide. The initial setup needs a computer (Linux works too).
 2. On the iPhone, download `ZTLive.ipa` from the `prototype` release.
@@ -74,7 +78,7 @@ Source: [City of Milan Open Data portal](https://dati.comune.milano.it), CC BY 4
 
 To refresh the data by hand: `python3 tools/build_zone_data.py`. GitHub Actions runs it every Monday (`update-data.yml`) and commits the files when they change; the app downloads them on launch (at most every 6 hours, or by pulling down the Alerts screen) and falls back to the bundled copy when offline.
 
-This information is indicative only: road signs and the City's official acts always prevail.
+This information is indicative only: road signs and the City's official acts always prevail. Gates, schedules and routes may change or contain errors, and the author accepts no liability for fines, wrong routes or changes not yet reflected in the data.
 
 ## License
 

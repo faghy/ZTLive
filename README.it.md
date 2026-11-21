@@ -26,6 +26,8 @@ Gli avvisi arrivano come **Live Activity**, visibile su CarPlay, schermata di bl
 - **Dati sempre aggiornati**: varchi e zone si aggiornano da soli, senza reinstallare l'app (vedi [Dati](#dati)).
 - **Simulazione** per provare Live Activity e CarPlay da fermi.
 
+**[Scarica ZTLive sull'App Store](https://apps.apple.com/it/app/ztlive/id6835826176)**: gratis per iPhone, disponibile in Italia.
+
 Sito con la mappa interattiva delle ZTL di Milano: [ztlive.it](https://ztlive.it).
 
 Verificato su iPhone 15 Pro Max con iOS 27.0.1: aggiornamento in background con Google Maps aperto, CarPlay in auto e sul TFT di una Honda Africa Twin (audio nel casco con interfono collegato).
@@ -48,7 +50,7 @@ Verificato su iPhone 15 Pro Max con iOS 27.0.1: aggiornamento in background con 
 
 ## Build
 
-Non serve un Mac: ogni push su `main` compila l'app su GitHub Actions. L'IPA non firmata viene pubblicata nella release [`prototype`](../../releases/tag/prototype).
+Non serve un Mac: ogni push su `main` compila l'app su GitHub Actions. L'IPA non firmata viene pubblicata nella release [`prototype`](../../releases/tag/prototype); quando cambia la versione, la build firmata va su TestFlight e da lì all'App Store (`testflight.yml`).
 
 I test della logica si possono eseguire ovunque ci sia Swift:
 
@@ -56,7 +58,9 @@ I test della logica si possono eseguire ovunque ci sia Swift:
 swift test --package-path Packages/ZTLCore
 ```
 
-## Installazione con SideStore
+## Installazione
+
+Il modo più semplice è l'[App Store](https://apps.apple.com/it/app/ztlive/id6835826176). Per provare una build compilata da te puoi usare SideStore:
 
 1. Installa [SideStore](https://sidestore.io) sull'iPhone seguendo la guida ufficiale. La configurazione iniziale richiede un computer, anche Linux.
 2. Dall'iPhone scarica `ZTLive.ipa` dalla release `prototype`.
@@ -74,7 +78,7 @@ Fonte: [Portale Open Data del Comune di Milano](https://dati.comune.milano.it), 
 
 Per aggiornare i dati a mano: `python3 tools/build_zone_data.py`. GitHub Actions lo esegue ogni lunedì (`update-data.yml`) e salva i file se sono cambiati; l'app li scarica all'avvio (al massimo ogni 6 ore, o trascinando in basso la schermata Avvisi) e senza connessione usa quelli inclusi.
 
-Le informazioni hanno valore indicativo: fanno fede la segnaletica e gli atti ufficiali del Comune.
+Le informazioni hanno valore indicativo: fanno fede la segnaletica e gli atti ufficiali del Comune. Varchi, orari e percorsi possono cambiare o contenere errori, e l'autore non risponde di multe, percorsi sbagliati o modifiche non ancora recepite.
 
 ## Licenza
 
